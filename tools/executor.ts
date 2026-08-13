@@ -14,6 +14,7 @@ import {
   bumpAgentMetrics,
   chargeBudget,
   createApproval,
+  listApprovals,
   writeAudit,
 } from "@/database/queries";
 import { formatMoney } from "@/lib/money";
@@ -83,6 +84,20 @@ export async function callTool(
   // 3 — Approval. The call is parked, not executed; the approval carries
   //     everything needed to replay it verbatim once a human decides.
   if (governance.decision === "REQUIRE_APPROVAL" && !ctx.approvalId) {
+    // A plan can propose the same action twice — two agents reaching the same
+    // conclusion, or two plans running over the same data. Approving both would
+    // double-order stock or double-refund a customer, so an identical pending
+    // request is reused rather than duplicated.
+    const duplicate = findPendingDuplicate(tool.name, entityIdFor(input));
+    if (duplicate) {
+      return finish(tool, input, ctx, governance, {
+        status: "PENDING_APPROVAL",
+        output: { approvalId: duplicate.id, deduplicated: true },
+        approvalId: duplicate.id,
+        started,
+      });
+    }
+
     const approval = buildApproval(tool, input, ctx, governance);
     createApproval(approval);
     bumpAgentMetrics(ctx.agentId, { approvals_requested: 1 });
@@ -194,6 +209,16 @@ function finish(
   };
 }
 
+/** An outstanding request for the same action on the same entity. */
+function findPendingDuplicate(toolName: string, entityId: string) {
+  if (entityId === "-") return null;
+  return (
+    listApprovals("PENDING").find(
+      (approval) => approval.toolName === toolName && approval.entityId === entityId,
+    ) ?? null
+  );
+}
+
 function buildApproval(
   tool: RegisteredTool,
   input: Record<string, unknown>,
@@ -237,6 +262,12 @@ function approvalTitle(
       return `Change price of ${input.productId}`;
     case "propose_budget_change":
       return `Move ${formatMoney(Math.abs(Number(input.deltaPaise ?? 0)))} of campaign budget`;
+    case "pause_campaign":
+      return `Pause campaign ${input.campaignId}`;
+    case "adjust_reorder_point":
+      return `Change reorder point for ${input.productId} by ${input.delta}`;
+    case "reply_ticket":
+      return `Reply to ticket ${input.ticketId}`;
     default:
       return `Run ${toolName}`;
   }
