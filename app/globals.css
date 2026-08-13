@@ -1,26 +1,130 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Commerce OS surface.
+
+  The reference is a trading terminal, not a marketing site: high information
+  density, a narrow palette, and colour reserved for meaning (risk, direction,
+  agent identity) rather than decoration.
+*/
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --bg: #f7f7f8;
+  --panel: #ffffff;
+  --panel-2: #fbfbfc;
+  --line: #e3e3e7;
+  --line-strong: #cfcfd6;
+  --ink: #16161a;
+  --ink-2: #55555f;
+  --ink-3: #86868f;
+  --accent: #3b5bfd;
+  --good: #0e8a54;
+  --warn: #b26b00;
+  --bad: #c02a30;
+  --crit: #8b1a5c;
+  --grid: rgba(0, 0, 0, 0.035);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0a0a0c;
+    --panel: #101014;
+    --panel-2: #15151b;
+    --line: #23232b;
+    --line-strong: #32323d;
+    --ink: #f0f0f3;
+    --ink-2: #a6a6b2;
+    --ink-3: #6e6e7c;
+    --accent: #6b8afd;
+    --good: #35d68f;
+    --warn: #f0a63a;
+    --bad: #ff6b6b;
+    --crit: #ff7ac6;
+    --grid: rgba(255, 255, 255, 0.03);
   }
 }
 
+html[data-theme="light"] {
+  --bg: #f7f7f8; --panel: #ffffff; --panel-2: #fbfbfc; --line: #e3e3e7;
+  --line-strong: #cfcfd6; --ink: #16161a; --ink-2: #55555f; --ink-3: #86868f;
+  --accent: #3b5bfd; --good: #0e8a54; --warn: #b26b00; --bad: #c02a30;
+  --crit: #8b1a5c; --grid: rgba(0, 0, 0, 0.035);
+}
+
+html[data-theme="dark"] {
+  --bg: #0a0a0c; --panel: #101014; --panel-2: #15151b; --line: #23232b;
+  --line-strong: #32323d; --ink: #f0f0f3; --ink-2: #a6a6b2; --ink-3: #6e6e7c;
+  --accent: #6b8afd; --good: #35d68f; --warn: #f0a63a; --bad: #ff6b6b;
+  --crit: #ff7ac6; --grid: rgba(255, 255, 255, 0.03);
+}
+
+* { border-color: var(--line); }
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1, "cv05" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Faint graph paper behind the shell — reads as instrumentation, not texture. */
+.surface-grid {
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.panel-flush { background: var(--panel-2); }
+
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.hairline { border-top: 1px solid var(--line); }
+
+/* Live indicator on active agents. */
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 currentColor; opacity: 0.85; }
+  70% { box-shadow: 0 0 0 5px transparent; opacity: 1; }
+  100% { box-shadow: 0 0 0 0 transparent; opacity: 0.85; }
+}
+.pulse { animation: pulse-ring 1.8s ease-out infinite; }
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.enter { animation: slide-in 220ms ease-out both; }
+
+@keyframes dash {
+  to { stroke-dashoffset: -18; }
+}
+.flowing { stroke-dasharray: 4 5; animation: dash 700ms linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse, .enter, .flowing { animation: none; }
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 6px;
+  border: 3px solid var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
