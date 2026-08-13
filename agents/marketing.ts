@@ -115,8 +115,7 @@ export const marketingAgent: Agent = {
           `Campaign performance, best first:`,
           ...campaigns.map(
             (c) =>
-              `- ${c.name} (${c.channel}, ${c.status}): ROAS ${c.roas}, spend ${c.spendPaise} paise, ` +
-              `revenue ${c.revenuePaise} paise, CAC ${c.cacPaise} paise, CTR ${c.ctr}%, verdict ${c.verdict}`,
+              `- ${c.name} (${c.channel}, ${c.status}): ROAS ${c.roas}, CAC ${c.cacPaise} paise, verdict ${c.verdict}`,
           ),
           ``,
           `Daily budget movement is capped at ${formatMoney(CAP)}.`,

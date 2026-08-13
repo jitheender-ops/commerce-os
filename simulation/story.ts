@@ -86,7 +86,7 @@ export async function runDemoStory(options: { reset?: boolean } = {}): Promise<D
   // ── Investigation ─────────────────────────────────────────────────────────
   const investigationId = newCorrelationId();
   const investigation = await runPlan({
-    ...planForEvent("REVENUE_ANOMALY", {})!,
+    ...(await planForEvent("REVENUE_ANOMALY", {}))!,
     correlationId: investigationId,
   });
   planIds.push(investigation.plan.id);
@@ -107,7 +107,7 @@ export async function runDemoStory(options: { reset?: boolean } = {}): Promise<D
   // ── Supply response ───────────────────────────────────────────────────────
   const supplyId = newCorrelationId();
   const supply = await runPlan({
-    ...planForEvent("INVENTORY_LOW", {})!,
+    ...(await planForEvent("INVENTORY_LOW", {}))!,
     correlationId: supplyId,
   });
   planIds.push(supply.plan.id);

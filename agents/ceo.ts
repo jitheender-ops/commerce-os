@@ -81,13 +81,13 @@ export const ceoAgent: Agent = {
           ...findings.map((f) =>
             [
               `${AGENTS[f.agentId].name}: ${f.headline}`,
-              ...f.inference.map((i) => `  - ${i}`),
+              ...f.inference.slice(0, 2).map((i) => `  - ${i.slice(0, 160)}`),
             ].join("\n"),
           ),
           ``,
           `Proposed actions, already ranked by expected impact:`,
           ...ranked
-            .slice(0, 6)
+            .slice(0, 4)
             .map(
               (r, index) =>
                 `${index + 1}. [${AGENTS[r.agentId].name}] ${r.title} — impact ${r.estimatedImpactPaise} paise, ` +

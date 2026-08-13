@@ -186,3 +186,60 @@ connection.
 
 **Why:** three live components on the dashboard would otherwise hold three server-side
 streams for identical data.
+
+---
+
+## ADR-016 · The model plans; ADR-002 is reversed by operator decision
+
+**Supersedes ADR-002**, which kept plan construction deterministic.
+
+The operator asked for full LLM orchestration after seeing the deterministic
+build, having been shown the reliability trade-off. That is their call, and it is
+now the primary path: the model decomposes a trigger into a task DAG, choosing
+which agents run and in what order.
+
+**What was kept from ADR-002.** The concern that motivated it — a malformed plan
+breaking everything downstream — is real and was observed in practice. So a model
+plan is accepted only after passing seven checks: schema, known agent ids, unique
+keys, resolvable dependencies, acyclic graph, size bounds, and a terminal `ceo`
+synthesis step. A cycle would hang the DAG walker forever; it is rejected before
+execution. Anything failing falls back to the template in `plans.ts`, and the plan
+records `planned_by` so the UI never shows a fallback as model output.
+
+**Measured behaviour** (llama-3.3-70b-versatile, Groq free tier, 3 runs of the
+same question): 2 of 3 runs were model-planned, one fell back on a malformed JSON
+response. All 3 completed in 4–8s with every agent reasoning on the model. Plans
+differed between runs — 5, 6 and 7 agents — which is inherent to the choice.
+
+---
+
+## ADR-017 · Failure classes are not interchangeable
+
+The gateway originally disabled the hosted provider for 60 seconds on **any**
+failure. With agents running concurrently, one agent's malformed JSON blanked the
+model for every agent after it — observed as 3 of 6 agents silently falling back.
+
+Failures are now classified:
+
+| Failure | Response |
+| --- | --- |
+| Schema mismatch | This call falls back. Provider stays enabled. |
+| Rate limit (429) | Retry honouring `retry-after`, then a 3s cooldown. |
+| Anything else | 60s cooldown — the endpoint is assumed unwell. |
+
+A process-wide gate also caps concurrent model requests at two. A tokens-per-
+minute quota is a shared resource: six simultaneous requests all read it as
+available, all send, and most get a 429.
+
+---
+
+## ADR-018 · The schema hint is derived, never hand-written
+
+The prompt's "required shape" was hand-rolled and rendered every array as
+`["string", ...]`. For a schema whose array holds objects — the planner's — that
+told the model nothing about the fields inside, so it invented its own names and
+every plan failed validation. A benchmark that spelled the shape out passed,
+which hid the bug.
+
+It is now generated with `z.toJSONSchema()` from the same schema used to validate
+the response, so the contract shown and the contract enforced cannot drift.

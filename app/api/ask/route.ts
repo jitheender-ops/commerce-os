@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const parsed = await body(request, Payload);
     if (parsed.error) return parsed.error;
 
-    const request_ = planForQuestion(parsed.data.question);
+    const request_ = await planForQuestion(parsed.data.question);
     const run = await runPlan(request_);
 
     return ok({
@@ -22,8 +22,13 @@ export async function POST(request: Request) {
       template: { id: request_.template.id, title: request_.template.title },
       plan: {
         id: run.plan.id,
+        title: run.plan.title,
         status: run.plan.status,
         correlationId: run.plan.correlationId,
+        // Whether the model or the fallback template produced this task graph,
+        // and the model's reasoning (or why its plan was rejected).
+        plannedBy: run.plan.plannedBy,
+        planNote: run.plan.planNote,
         tasks: run.tasks,
       },
       results: run.results,

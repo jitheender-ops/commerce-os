@@ -163,9 +163,20 @@ Instead:
 
 ```
 AIGateway
-├── DeterministicProvider   default — no network, no key, no local compute
-└── HostedProvider          optional — OpenAI-compatible HTTP, free tiers
+├── HostedProvider          primary — OpenAI-compatible HTTP, free tiers
+└── DeterministicProvider   fallback — no network, no key, no local compute
 ```
+
+The model **plans as well as reasons**: it builds the task DAG deciding which
+agents run and in what order. Its plan is accepted only after passing seven
+checks (schema, known agents, unique keys, resolvable dependencies, acyclic,
+size bounds, terminal synthesis step) — a cycle would hang the executor forever.
+Anything failing falls back to the fixed templates, and the plan records
+`planned_by` so a fallback is never shown as model output. See ADR-016.
+
+Measured on Groq's free tier with `llama-3.3-70b-versatile`: 4–8s per full run,
+every agent reasoning on the model, roughly 2 in 3 runs model-planned. Plans
+differ between runs — that is inherent to model-driven orchestration.
 
 `HostedProvider` speaks the OpenAI-compatible chat shape, so Groq, Google Gemini and
 OpenRouter free tiers all work through one adapter. Set `AI_BASE_URL`, `AI_API_KEY` and

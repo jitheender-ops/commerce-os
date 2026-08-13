@@ -234,7 +234,11 @@ CREATE TABLE IF NOT EXISTS plans (
   status         TEXT NOT NULL,
   correlation_id TEXT NOT NULL,
   created_at     TEXT NOT NULL,
-  finished_at    TEXT
+  finished_at    TEXT,
+  -- 'model' when the task graph came from the LLM, 'template' when the
+  -- deterministic fallback was used. Rendered in the UI; never inferred.
+  planned_by     TEXT NOT NULL DEFAULT 'template',
+  plan_note      TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tasks (

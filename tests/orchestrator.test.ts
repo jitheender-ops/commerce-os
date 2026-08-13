@@ -9,7 +9,7 @@ beforeAll(() => {
 
 describe("orchestrator", () => {
   it("investigates a revenue drop end to end", async () => {
-    const request = planForQuestion("why did sales drop yesterday?");
+    const request = await planForQuestion("why did sales drop yesterday?");
     expect(request.template.id).toBe("revenue_investigation");
 
     const run = await runPlan(request);
@@ -22,7 +22,7 @@ describe("orchestrator", () => {
   }, 30_000);
 
   it("has the analytics agent name the conversion driver from real data", async () => {
-    const run = await runPlan(planForQuestion("why did sales drop yesterday?"));
+    const run = await runPlan(await planForQuestion("why did sales drop yesterday?"));
     const analytics = run.results.find((r) => r.agentId === "analytics");
 
     expect(analytics).toBeDefined();
@@ -33,7 +33,7 @@ describe("orchestrator", () => {
   }, 30_000);
 
   it("runs independent tasks and feeds results forward to the CEO", async () => {
-    const run = await runPlan(planForQuestion("why did sales drop yesterday?"));
+    const run = await runPlan(await planForQuestion("why did sales drop yesterday?"));
     const ceo = run.results.find((r) => r.agentId === "ceo");
 
     expect(ceo).toBeDefined();
@@ -42,7 +42,7 @@ describe("orchestrator", () => {
   }, 30_000);
 
   it("routes a stockout event to inventory then procurement", async () => {
-    const request = planForEvent("INVENTORY_LOW", { sku: "SKU-1001" });
+    const request = await planForEvent("INVENTORY_LOW", { sku: "SKU-1001" });
     expect(request).not.toBeNull();
     expect(request!.template.id).toBe("stockout_response");
 
@@ -54,7 +54,7 @@ describe("orchestrator", () => {
 
   it("writes an audit row for every tool call", async () => {
     const before = listAudit({ limit: 500 }).length;
-    await runPlan(planForEvent("CAMPAIGN_PERFORMANCE_CHANGED", {})!);
+    await runPlan((await planForEvent("CAMPAIGN_PERFORMANCE_CHANGED", {}))!);
     const after = listAudit({ limit: 500 });
 
     expect(after.length).toBeGreaterThan(before);
@@ -65,7 +65,7 @@ describe("orchestrator", () => {
   }, 30_000);
 
   it("labels which engine produced the reasoning", async () => {
-    const run = await runPlan(planForEvent("CAMPAIGN_PERFORMANCE_CHANGED", {})!);
+    const run = await runPlan((await planForEvent("CAMPAIGN_PERFORMANCE_CHANGED", {}))!);
     for (const result of run.results) {
       expect(result.engine).toBe("Deterministic Business Engine");
     }
@@ -74,7 +74,7 @@ describe("orchestrator", () => {
 
 describe("approvals", () => {
   it("parks high-value purchase orders instead of executing them", async () => {
-    await runPlan(planForEvent("INVENTORY_LOW", {})!);
+    await runPlan((await planForEvent("INVENTORY_LOW", {}))!);
     const approvals = listApprovals("PENDING");
     // Procurement only proposes; nothing above the limit executes unattended.
     for (const approval of approvals) {

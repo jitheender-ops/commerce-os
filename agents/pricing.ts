@@ -150,7 +150,7 @@ export const pricingAgent: Agent = {
         user: [
           `Competitive position (positive gap = we are more expensive):`,
           ...rows
-            .slice(0, 12)
+            .slice(0, 6)
             .map(
               (r) =>
                 `- ${r.sku}: ours ${formatMoney(r.ourPricePaise)}, market ${formatMoney(r.competitorPricePaise)}, ` +

@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "vite-node --config vitest.config.mts scripts/seed-demo.ts",
-    "reset-demo": "vite-node --config vitest.config.mts scripts/seed-demo.ts -- --reset"
+    "reset-demo": "vite-node --config vitest.config.mts scripts/seed-demo.ts -- --reset",
+    "check-ai": "vite-node --config vitest.config.mts scripts/check-ai.ts",
+    "bench-models": "vite-node --config vitest.config.mts scripts/bench-models.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",

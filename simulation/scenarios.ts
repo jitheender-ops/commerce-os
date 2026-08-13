@@ -273,7 +273,7 @@ export async function triggerScenario(
 
   let plan: PlanRunResult | null = null;
   if (options.autoRun !== false) {
-    const request = planForEvent(scenario.event, payload);
+    const request = await planForEvent(scenario.event, payload);
     if (request) plan = await runPlan({ ...request, correlationId });
   }
 

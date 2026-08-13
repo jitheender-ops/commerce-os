@@ -9,8 +9,9 @@
  *   PENDING → PLANNING → RUNNING → VERIFYING → COMPLETED
  *                     ↘ FAILED / BLOCKED / CANCELLED
  *
- * Plan construction is deterministic (see plans.ts); the reasoning inside each
- * task is the agent's own.
+ * The task graph comes from the model (see llm-planner.ts), validated before
+ * use and falling back to the fixed templates in plans.ts when the model is
+ * absent or returns something unusable.
  */
 import { getAgentImpl } from "@/agents";
 import { AGENTS } from "@/agents/definitions";
@@ -18,6 +19,7 @@ import { callTool } from "@/tools/executor";
 import { getBus } from "@/events/bus";
 import { getDb, fromJson, num, str, toJson } from "@/database/db";
 import { newCorrelationId, newId } from "@/lib/ids";
+import { planWithModel } from "./llm-planner";
 import {
   PLAN_TEMPLATES,
   templateForEvent,
@@ -75,31 +77,69 @@ export interface PlanRequest {
   goalId?: string | null;
   correlationId?: string;
   triggerPayload?: Record<string, unknown>;
+  /** Which path produced the task graph. Rendered in the UI, never inferred. */
+  plannedBy?: "model" | "template";
+  /** The model's stated reasoning, or why its plan was rejected. */
+  planNote?: string | null;
 }
 
 // ─── Plan selection ──────────────────────────────────────────────────────────
+//
+// The model plans by default; the templates in plans.ts are the fallback when
+// no model is configured or its plan fails validation. See ADR-016.
 
-export function planForEvent(type: EventType, payload: Record<string, unknown> = {}): PlanRequest | null {
+async function withModelPlan(
+  trigger: string,
+  fallback: PlanTemplate,
+  context: string,
+  base: Partial<PlanRequest>,
+): Promise<PlanRequest> {
+  const planned = await planWithModel(trigger, fallback, context);
+  return {
+    ...base,
+    trigger,
+    template: planned.template,
+    plannedBy: planned.plannedBy,
+    planNote: planned.rejection
+      ? `Model plan rejected — ${planned.rejection}. Fell back to the "${fallback.id}" template.`
+      : planned.modelReasoning,
+  };
+}
+
+export async function planForEvent(
+  type: EventType,
+  payload: Record<string, unknown> = {},
+): Promise<PlanRequest | null> {
   const template = templateForEvent(type);
   if (!template) return null;
-  return { trigger: `Event: ${type}`, template, triggerPayload: payload };
+  return withModelPlan(
+    `Event: ${type}`,
+    template,
+    `Event payload: ${JSON.stringify(payload).slice(0, 500)}`,
+    { triggerPayload: payload },
+  );
 }
 
-export function planForGoal(goal: BusinessGoal): PlanRequest {
-  return {
-    trigger: `Goal: ${goal.statement}`,
-    template: templateForGoal(goal.metric),
-    goalId: goal.id,
-    triggerPayload: { goalId: goal.id, metric: goal.metric, target: goal.targetPercent },
-  };
+export async function planForGoal(goal: BusinessGoal): Promise<PlanRequest> {
+  return withModelPlan(
+    `Goal: ${goal.statement}`,
+    templateForGoal(goal.metric),
+    `Target: ${goal.targetPercent}% change in ${goal.metric} within ${goal.deadlineDays} days.` +
+      (goal.constraints.length ? ` Constraints: ${goal.constraints.join("; ")}.` : ""),
+    {
+      goalId: goal.id,
+      triggerPayload: { goalId: goal.id, metric: goal.metric, target: goal.targetPercent },
+    },
+  );
 }
 
-export function planForQuestion(question: string): PlanRequest {
-  return {
-    trigger: `Question: ${question}`,
-    template: templateForIntent(question),
-    triggerPayload: { question },
-  };
+export async function planForQuestion(question: string): Promise<PlanRequest> {
+  return withModelPlan(
+    `Question: ${question}`,
+    templateForIntent(question),
+    `The operator asked this about the business. Decide who needs to investigate.`,
+    { triggerPayload: { question } },
+  );
 }
 
 // ─── Execution ───────────────────────────────────────────────────────────────
@@ -348,11 +388,15 @@ function persistPlan(request: PlanRequest, correlationId: string): Plan {
     correlationId,
     createdAt: new Date().toISOString(),
     finishedAt: null,
+    plannedBy: request.plannedBy ?? "template",
+    planNote: request.planNote ?? null,
   };
   getDb().run(
-    `INSERT INTO plans (id, goal_id, title, trigger, status, correlation_id, created_at, finished_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, NULL)`,
-    plan.id, plan.goalId, plan.title, plan.trigger, plan.status, plan.correlationId, plan.createdAt,
+    `INSERT INTO plans (id, goal_id, title, trigger, status, correlation_id, created_at,
+        finished_at, planned_by, plan_note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+    plan.id, plan.goalId, plan.title, plan.trigger, plan.status, plan.correlationId,
+    plan.createdAt, plan.plannedBy, plan.planNote,
   );
   return plan;
 }
@@ -440,6 +484,8 @@ export function listPlans(limit = 20): Plan[] {
       correlationId: str(row.correlation_id),
       createdAt: str(row.created_at),
       finishedAt: row.finished_at ? str(row.finished_at) : null,
+      plannedBy: (str(row.planned_by) === "model" ? "model" : "template"),
+      planNote: row.plan_note ? str(row.plan_note) : null,
     }));
 }
 

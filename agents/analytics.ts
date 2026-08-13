@@ -33,7 +33,7 @@ interface Anomaly {
 
 const Analysis = z.object({
   rootCause: z.string(),
-  confidence: z.number().min(0).max(1),
+  confidence: z.coerce.number().min(0).max(1),
   ruledOut: z.array(z.string()),
   nextInvestigation: z.string(),
   narrative: z.string(),
@@ -113,7 +113,7 @@ export const analyticsAgent: Agent = {
           ...decomposition.supporting.map((s) => `- ${s.label}: ${s.value} (${s.detail ?? "no baseline"})`),
           ``,
           `Payment failure rate by channel:`,
-          ...channels.map((c) => `- ${c.channel}: ${c.failureRate}% over ${c.orders} orders`),
+          ...channels.map((c) => `- ${c.channel}: ${c.failureRate}% failures over ${c.orders} orders`),
           ``,
           anomalies.length
             ? `Statistical anomalies (>2σ): ${anomalies.map((a) => `${a.metric} ${a.zScore}σ`).join(", ")}`

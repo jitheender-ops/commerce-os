@@ -231,6 +231,10 @@ export interface Plan {
   correlationId: string;
   createdAt: string;
   finishedAt: string | null;
+  /** Whether the LLM produced this task graph, or the deterministic fallback did. */
+  plannedBy: "model" | "template";
+  /** The model's reasoning, or why its plan was rejected. */
+  planNote: string | null;
 }
 
 export interface BusinessGoal {

@@ -81,6 +81,7 @@ export function getDb(): DatabaseAdapter {
     raw.exec("PRAGMA journal_mode = WAL;");
     raw.exec("PRAGMA foreign_keys = ON;");
     raw.exec(SCHEMA);
+    migrate(raw);
     globalRef.__commerceDb = new SqliteAdapter(raw);
   }
   return globalRef.__commerceDb;
@@ -92,6 +93,29 @@ export function createMemoryDb(): DatabaseAdapter {
   raw.exec("PRAGMA foreign_keys = ON;");
   raw.exec(SCHEMA);
   return new SqliteAdapter(raw);
+}
+
+/**
+ * Idempotent column additions.
+ *
+ * `CREATE TABLE IF NOT EXISTS` leaves an existing table alone, so a database
+ * created before a column was added never gets it. Each entry here is applied
+ * only when the column is genuinely missing.
+ */
+function migrate(raw: DatabaseSync): void {
+  const additions: [table: string, column: string, definition: string][] = [
+    ["plans", "planned_by", "TEXT NOT NULL DEFAULT 'template'"],
+    ["plans", "plan_note", "TEXT"],
+  ];
+
+  for (const [table, column, definition] of additions) {
+    const existing = raw
+      .prepare(`PRAGMA table_info(${table})`)
+      .all() as { name: string }[];
+    if (existing.length === 0) continue; // table not created yet
+    if (existing.some((c) => c.name === column)) continue;
+    raw.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
 }
 
 export function truncateAll(db: DatabaseAdapter): void {

@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     if (!input.execute) return ok({ goal, plan: null });
 
-    const run = await runPlan(planForGoal(goal));
+    const run = await runPlan(await planForGoal(goal));
     return ok({
       goal,
       plan: {
