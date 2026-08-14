@@ -128,3 +128,18 @@ relevant memories enter a prompt, never the whole store.
 | `AIProvider` | Deterministic, hosted | Any provider |
 | Tool registry | 28 tools | Add a definition; governance applies automatically |
 | Plan templates | 7 templates | Add a template; triggers and intents route to it |
+| Agent transport | MCP over stdio | HTTP/SSE MCP, A2A |
+
+## External agents (MCP)
+
+`tools/mcp-server.ts` speaks MCP over stdio (`npm run mcp`) and is a translation layer,
+nothing more: JSON-RPC in, `callTool` out. It holds no privileges of its own — the server
+binds to one agent identity from `MCP_AGENT_ID` (default `analytics`, read-only), and that
+identity's permissions are the client's permissions. There is no code path from the
+protocol to the database that skips governance, because the server has no database import.
+
+`tools/list` generates input schemas from the same Zod definitions the executor validates
+against, so a published schema cannot drift from the enforced one. Calls carry an `mcp_…`
+correlation id, which is how the audit log separates an external caller from an internal
+agent. The MCP SDK is not a dependency — three methods and a line reader is less code than
+adding one, and it keeps the zero-native-dependency install intact.

@@ -16,6 +16,7 @@
     "seed": "vite-node --config vitest.config.mts scripts/seed-demo.ts",
     "reset-demo": "vite-node --config vitest.config.mts scripts/seed-demo.ts -- --reset",
     "check-ai": "vite-node --config vitest.config.mts scripts/check-ai.ts",
+    "mcp": "vite-node --config vitest.config.mts scripts/mcp.ts",
     "bench-models": "vite-node --config vitest.config.mts scripts/bench-models.ts"
   },
   "dependencies": {

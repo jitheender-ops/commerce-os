@@ -206,15 +206,54 @@ native module to compile and no database server to run.
 | --- | --- |
 | `npm run dev` | Development server |
 | `npm run build` / `npm start` | Production build and serve |
-| `npm test` | 54 tests — governance, security, agents, scenarios |
+| `npm test` | 72 tests — governance, security, agents, scenarios, MCP |
 | `npm run typecheck` | Strict TypeScript, no `any` in domain code |
 | `npm run seed` | Seed if empty |
 | `npm run reset-demo` | Wipe and reseed to the exact starting state |
+| `npm run mcp` | MCP server exposing the governed tools over stdio |
 
 ### Environment
 
 Everything is optional — see [.env.example](.env.example). With no `.env` file the
 system runs fully offline.
+
+---
+
+## MCP server
+
+The same tools the internal agents use are exposed to external agents over the Model
+Context Protocol, on the stdio transport:
+
+```bash
+claude mcp add commerce-os -- npm --prefix /path/to/commerce-os run mcp
+```
+
+An external client is **not** privileged. The server binds to one agent identity —
+`MCP_AGENT_ID`, defaulting to `analytics`, which holds only read permissions — and every
+call goes through the same `callTool` pipeline an internal agent uses:
+
+```
+MCP client → tools/call → schema → permission → policy → risk → budget → execute → audit
+```
+
+So an MCP client bound to `procurement` raising a ₹1,00,000 purchase order gets this back,
+and nothing executes:
+
+```json
+{ "status": "PENDING_APPROVAL", "decision": "REQUIRE_APPROVAL",
+  "approvalId": "apr_…", "note": "Parked for human approval. Nothing has executed." }
+```
+
+The item appears in the human approval queue at `/approvals` with its full decision trace,
+exactly as an internal agent's would. The governance verdict rides along with successful
+calls too — a client that only ever saw outputs could not tell a checked action from an
+unchecked one. Calls are correlated under an `mcp_…` id, so the audit log distinguishes
+an external caller from an internal agent.
+
+`tools/list` returns only the bound agent's surface, with input schemas generated from the
+same Zod definitions the executor validates against, so the schema a client reads cannot
+drift from the schema enforced. There is no MCP SDK dependency: `initialize`,
+`tools/list`, `tools/call` and a line reader is less code than adding one.
 
 ---
 
@@ -319,8 +358,9 @@ Stated plainly, because a fake would violate the honesty rules above:
   without one, so it is absent rather than faked.
 - **Supabase / Postgres adapter.** `DatabaseAdapter` is the seam; only SQLite ships.
 - **Redis event bus.** `EventBus` is the seam; only the in-process bus ships.
-- **MCP / A2A / agent payment protocols.** `AgentTransport` and `CommerceAdapter` are
-  designed as adapter seams. Nothing claims to speak these protocols today.
+- **A2A and agent payment protocols.** `CommerceAdapter` is designed as the seam.
+  Nothing claims to speak them today. MCP *is* implemented — see above — over stdio
+  only; there is no HTTP/SSE MCP transport.
 - **Real payment, supplier or ad-platform integration.** All simulated and labelled.
 
 ---

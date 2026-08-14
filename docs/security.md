@@ -34,6 +34,12 @@ Two invariants are tested rather than documented:
 2. `READ_CUSTOMER_PII` is held by no agent. Customer data is reachable only in the
    aggregate shapes the tools return.
 
+An **external agent connecting over MCP is not a new kind of principal**. The MCP server
+binds to one of these same seven identities (`MCP_AGENT_ID`, default `analytics`, which
+holds read permissions only), so an external client can never hold authority no internal
+agent holds. Its calls run through the identical pipeline and land in the same audit log,
+tagged with an `mcp_…` correlation id.
+
 ## Check order
 
 ```
@@ -96,3 +102,6 @@ the database. `.env` is gitignored; `.env.example` contains no values.
 - **The approval actor is unverified** — `resolvedBy` is whatever the client sends.
 - **SQLite is single-writer.** Fine for one process; a multi-instance deployment needs
   the Postgres adapter seam.
+- **The MCP server has no transport-level authentication.** stdio has no place to put
+  one: whoever can spawn the process gets the bound agent's authority, which is why the
+  default binding is read-only. An HTTP transport would need auth before it ships.
