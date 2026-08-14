@@ -119,8 +119,8 @@ stock) so it cannot invent a specification.
 
 ## Customer Agent — experience and recovery
 
-**Tools:** `get_orders`, `get_open_tickets`, `get_product_recommendations`,
-`reply_ticket`, `create_refund`
+**Tools:** `get_orders`, `get_order_status`, `get_open_tickets`,
+`get_product_recommendations`, `reply_ticket`, `create_refund`
 
 Tickets are classified by theme deterministically, so a cluster of the same complaint is
 visible as a *pattern* rather than as ten separate replies. Two or more on one theme is
@@ -131,6 +131,20 @@ decides. Ticket bodies are customer-authored and wrapped as untrusted data befor
 reach any model.
 
 Replies are low-risk and carry no money, so they execute directly.
+
+### Replies are grounded, or they say nothing
+
+Anything a customer is told about their order comes from `get_order_status`, which joins
+the order with its fulfilment row and returns one sentence describing where it actually
+is. Where no state could be retrieved, the reply says the status is being checked.
+
+This replaced templates that invented it. One told customers *"your order has left our
+warehouse but the courier has not scanned it since; we have opened a trace with them"* —
+fabricated on every send, about a shipment no part of this system had observed, in the
+one place the product speaks directly to a customer.
+
+The agent fetches state for exactly the tickets it will answer, so the "grounded" count
+on its result means what it says rather than counting a prefix of the queue.
 
 ---
 

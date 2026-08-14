@@ -243,3 +243,105 @@ which hid the bug.
 
 It is now generated with `z.toJSONSchema()` from the same schema used to validate
 the response, so the contract shown and the contract enforced cannot drift.
+
+---
+
+## ADR-019 · The queue is a table, not Redis
+
+Anything that leaves the process can fail, and the event bus is fire-and-forget: a
+subscriber that throws loses the work. A supplier call cannot be lost, so it goes through
+a durable queue instead.
+
+That queue is a `job_queue` table. Redis was the obvious answer and was rejected for the
+same reason the event bus is in-process: this application is one Node process, so a
+broker adds an install, a daemon and a second source of truth in exchange for nothing.
+Jobs survive a restart because SQLite does, and `run_after` carries the backoff so a
+failing job is simply invisible until its time comes.
+
+**Consequence:** a second instance would double-run every job. There is no distributed
+lock, only the status flip inside a transaction, which is sufficient for one writer and
+not for two. The deployment docs pin the instance count, and that is not a preference.
+
+---
+
+## ADR-020 · The tool commits intent; the worker makes the call
+
+`fulfill_order` writes a `fulfillments` row and enqueues a job. It does not contact the
+supplier.
+
+Calling the vendor inline would put an unbounded network wait inside the governance
+executor — one slow supplier would stall an agent run, and a timeout would lose the
+action entirely, because the tool had already been recorded as attempted. Splitting them
+means the decision is durable before the network is involved, and the call can be retried
+without re-deciding anything.
+
+It also makes the dead letter queue meaningful rather than decorative: there is a row to
+retry, and a place for it to end up when retrying stops making sense.
+
+---
+
+## ADR-021 · Printful drafts only, and confirmation is not implemented
+
+The live supplier creates draft orders. Printful's documentation states that drafts are
+never charged and never picked up for fulfilment, and confirming one is a separate API
+call.
+
+That call is deliberately absent from `integrations/printful.ts`. The guarantee that an
+agent cannot cause a garment to be printed or a card to be charged is therefore a
+property of the code — there is no path to it — rather than a promise about how the code
+will be used. A test asserts the outgoing request never mentions confirmation, because a
+comment saying so would not survive the next edit.
+
+Printful has no sandbox environment. Drafts against a live account are the honest
+equivalent, which is exactly why the guarantee needs to hold in code.
+
+Two simplifications ride along, both stated in the README rather than hidden: every
+seeded SKU maps to one configured catalog variant, because a generated catalogue has no
+real Printful equivalent and a per-product mapping would be invented; and the recipient
+is a fixed operator address. `SupplierOrderRequest` cannot carry customer data, so the
+PII that `SEC-001` restricts cannot reach a vendor even by accident.
+
+---
+
+## ADR-022 · A shared password, and the honest name for it
+
+A public deployment of a console whose buttons approve money needs something at the door.
+`DEMO_PASSWORD` puts the whole site behind HTTP Basic in `proxy.ts`; unset, there is no
+gate and local development is untouched.
+
+HTTP Basic because the browser draws the prompt: no login page, no session store, no
+password field to get wrong. The comparison is constant-time, because `===` leaks the
+matching prefix through timing and that is how a shared password gets guessed one
+character at a time. A cookie is set on success because `EventSource` cannot carry an
+Authorization header, and the live event stream has to keep working once you are through
+the door.
+
+`/api/health` is exempt. A platform health check that receives a 401 reads the instance
+as dead and rolls the deployment back.
+
+**What it is not:** authentication. One password for everyone, no accounts, no roles, and
+the cookie holds the password rather than a signed session token. It stops a passer-by
+approving a ₹2,00,000 purchase order. It would not stop an attacker, and calling it auth
+would be the kind of claim this project spends its time avoiding.
+
+---
+
+## ADR-023 · SQLite stayed, against a proposal to move to MongoDB
+
+A five-phase plan to make the system "fully live" opened by replacing all persistence
+with Mongoose. It was declined, and the reasoning is worth recording because the request
+was reasonable.
+
+The premise was that the system relied on mocked data. It did not: `database/queries.ts`
+is a thousand lines of real SQL over 29 real tables, the hosted model was already live,
+and the observability pages already existed. What was actually simulated — suppliers,
+payments, ad platforms — is not fixed by changing databases.
+
+Porting 29 tables and 55 query functions would have traded a zero-dependency local file
+for a cloud database, an account, network latency on every page, and the loss of the two
+properties a judged demo depends on: it runs with the wifi unplugged, and it resets in
+53 milliseconds. A judge cannot see which database is underneath.
+
+`DatabaseAdapter` remains the seam if a multi-instance deployment ever needs Postgres.
+The work went into the supplier integration instead, which is the part that was actually
+fake.

@@ -64,7 +64,9 @@ orchestration/  plan templates + the DAG walker and task state machine
 policies/       governance pipeline, policy limits, the read surface it needs
 tools/          tool definitions (zod in/out, permission, risk, financial impact) + executor
 database/       schema, adapter, all queries and business arithmetic
-events/         in-process bus, persistence, SSE fan-out
+events/         in-process bus, persistence, SSE fan-out, durable job queue + DLQ
+integrations/   the only modules that reach the public internet: supplier gateway,
+                Printful client, fulfilment job handler
 memory/         retrieval-ranked agent memory + product ranking (the "vector store" seam)
 simulation/     deterministic seed, 8 scenarios, the scripted demo story
 ai/             gateway: deterministic + hosted providers
@@ -75,7 +77,7 @@ components/     UI primitives, live surfaces, charts, interactive panels
 ## Persistence
 
 SQLite through Node's built-in `node:sqlite` — no native compilation, no service.
-30 tables with foreign keys on and indexes on every foreign key plus
+29 tables with foreign keys on and indexes on every foreign key plus
 `events(created_at)`, `audit_logs(created_at)` and `orders(created_at)`.
 
 `DatabaseAdapter` (`database/db.ts`) is deliberately narrow — `all` / `get` / `run` /
@@ -117,6 +119,34 @@ relevant memories enter a prompt, never the whole store.
 - **Verification** — a result with no observed evidence is rejected even if it reads well.
 - **Stale approvals** — approving replays the call through the *full* pipeline, so an
   approval that has gone stale still cannot execute something the rules now forbid.
+- **Supplier failure** — retried with exponential backoff, or immediately dead-lettered
+  when a retry cannot help (a rejected payload, a missing order). A 429 waits exactly as
+  long as the vendor's `retry-after` header asks rather than guessing.
+- **Exhausted retries** — the job moves to the dead letter queue and the fulfilment is
+  parked in `EXCEPTION` carrying the vendor's own error, where `/fulfillment` shows it.
+  One poisonous job never blocks the ones behind it.
+
+## Work that leaves the process
+
+Everything else here is synchronous and in-memory, which is what makes it reproducible.
+A supplier call is neither, so it is the one path built to assume failure:
+
+```
+fulfill_order → governance → fulfillments row (PENDING_SUPPLIER) → job_queue row
+                                                                        │
+                                              worker → SupplierGateway → vendor
+```
+
+The tool commits intent and returns; the worker makes the call. Vendor latency never
+enters the executor, and a failed submission retries instead of vanishing. The queue is
+a table rather than Redis because this is a single-process application — a broker would
+add an install, a daemon and a second source of truth to gain nothing, and jobs survive
+a restart because SQLite does.
+
+`SupplierGateway` mirrors the AI gateway: a deterministic implementation that always
+works offline, and a live one (Printful) used only when its credentials are present.
+Printful orders are created as drafts, which are never charged and never fulfilled;
+confirming a draft is a separate API call this system does not implement.
 
 ## Extension seams
 
@@ -126,7 +156,7 @@ relevant memories enter a prompt, never the whole store.
 | `EventBus` | In-process | Redis / NATS |
 | `VectorStore` | Lexical | Embeddings |
 | `AIProvider` | Deterministic, hosted | Any provider |
-| Tool registry | 30 tools | Add a definition; governance applies automatically |
+| Tool registry | 31 tools | Add a definition; governance applies automatically |
 | Plan templates | 7 templates | Add a template; triggers and intents route to it |
 | Agent transport | MCP over stdio | HTTP/SSE MCP, A2A |
 

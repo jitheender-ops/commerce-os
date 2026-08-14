@@ -18,6 +18,10 @@ npm run dev
 Open <http://localhost:3000>. No API key, no database setup, no cloud account, no local
 model. The demo business seeds itself on first request.
 
+A deployed instance runs at **<https://commerce-os-phdo.onrender.com>** behind a shared
+password. It is the same code; the local run is the one the demo script is written for,
+because it needs no network.
+
 ---
 
 ## What it does
@@ -46,7 +50,7 @@ as a cause. Inventory and Pricing clear their own domains. The Customer Agent fi
 four tickets sharing one theme and calls it systemic. The CEO Agent ranks everything
 and names the top priority.
 
-None of that is scripted. It is computed from 2,109 seeded orders.
+None of that is scripted. It is computed from 2,124 seeded orders.
 
 ---
 
@@ -148,8 +152,14 @@ The system never claims a model did something it did not.
   deterministic code. A model never produces a figure, in either mode.
 - **Projections are labelled `ESTIMATED`** and name their model (constant-elasticity,
   weighted moving average).
-- **Payments, suppliers and ad platforms are simulated.** Transaction IDs are
-  `TXN_DEMO_*`. No external service is contacted and no money moves.
+- **Payments and ad platforms are simulated.** Transaction IDs are `TXN_DEMO_*`. No
+  external service is contacted and no money moves.
+- **Fulfilment is simulated unless a supplier is configured**, and identified as
+  `SUP_DEMO_*` when it is. With Printful credentials set it submits real orders — as
+  **drafts**, which are never charged and never fulfilled. Confirming a draft is a
+  separate API call this system does not implement, so no agent can cause a charge.
+- **What a customer is told about their order** comes from that order's fulfilment state
+  or is not said at all. No invented couriers, trace numbers or delivery dates.
 - **Unmeasured funnel stages say "not instrumented"** rather than showing a plausible
   invention.
 
@@ -209,7 +219,7 @@ native module to compile and no database server to run.
 | --- | --- |
 | `npm run dev` | Development server |
 | `npm run build` / `npm start` | Production build and serve |
-| `npm test` | 94 tests — governance, security, agents, scenarios, MCP, queue, fulfilment |
+| `npm test` | 127 tests — governance, security, agents, scenarios, MCP, queue, fulfilment, the password gate |
 | `npm run typecheck` | Strict TypeScript, no `any` in domain code |
 | `npm run seed` | Seed if empty |
 | `npm run reset-demo` | Wipe and reseed to the exact starting state |
@@ -389,7 +399,7 @@ Not supported as-is, and the gap is architectural rather than configuration:
 
 1. **SQLite would have to become hosted Postgres.** `DatabaseAdapter` in
    `database/db.ts` is the seam — deliberately narrow — but every query in
-   `database/queries.ts` and all 30 tables need porting.
+   `database/queries.ts` and all 29 tables need porting.
 2. **The in-process event bus does not survive multiple instances.** SSE would need
    replacing with a durable queue or polling.
 
@@ -417,7 +427,7 @@ Presenter script: [docs/demo.md](docs/demo.md).
 
 ## Data
 
-Deterministically generated: 50 products · 500 customers · 2,109 orders over 30 days ·
+Deterministically generated: 50 products · 500 customers · 2,124 orders over 30 days ·
 10 suppliers · 8 campaigns · 12 support tickets · 30 days of daily metrics.
 
 Daily metrics are *derived from the generated orders* rather than invented separately,
@@ -455,7 +465,15 @@ Stated plainly, because a fake would violate the honesty rules above:
 - **A2A and agent payment protocols.** `CommerceAdapter` is designed as the seam.
   Nothing claims to speak them today. MCP *is* implemented — see above — over stdio
   only; there is no HTTP/SSE MCP transport.
-- **Real payment, supplier or ad-platform integration.** All simulated and labelled.
+- **Real payment or ad-platform integration.** Both simulated and labelled.
+- **Confirming a Printful order.** The supplier integration is real and creates draft
+  orders; the call that confirms one — the call that would cause production and a charge —
+  is deliberately not implemented. See ADR-021.
+- **Shipping to the actual customer.** A live supplier receives a fixed operator address,
+  because `SupplierOrderRequest` cannot carry customer data. A real dropshipping business
+  would need that decision taken deliberately, against `SEC-001`.
+- **Authentication.** `DEMO_PASSWORD` is one shared password over HTTP Basic for public
+  deployments. There are no accounts and no roles, and it is not called auth.
 
 ---
 

@@ -26,7 +26,7 @@ Point at the header badge: **Demo mode — Deterministic Business Engine**.
 
 The Command Center. Eight metrics, eight agents idle, the funnel twin, the agent graph.
 
-> "A generated storefront: 50 products, 500 customers, 2,109 orders over 30 days. The
+> "A generated storefront: 50 products, 500 customers, 2,124 orders over 30 days. The
 > daily metrics are derived from those orders, not invented separately — which is why
 > the decomposition you're about to see actually reconciles."
 
@@ -108,7 +108,7 @@ Settings → Policies. Then:
 
 Optional, if asked how it's enforced:
 
-> "`npm test` — 94 tests. Every agent tries a tool it doesn't have permission for.
+> "`npm test` — 127 tests. Every agent tries a tool it doesn't have permission for.
 > All denied, by code, before any policy even runs."
 
 ---

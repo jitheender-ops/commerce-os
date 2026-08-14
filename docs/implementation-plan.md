@@ -3,6 +3,22 @@
 This document is the output of step §94 of the build brief: inspect first, critique the
 proposed architecture, revise where it is wrong, then implement.
 
+> **Historical.** This is the plan as written before the build, kept because the critique
+> in §3 is the reasoning behind decisions the code still follows. It describes seven
+> agents and 28 tools; there are now eight and 31. What shipped after it was finished:
+>
+> | Added | Where it is documented |
+> | --- | --- |
+> | MCP server over the governed tool registry | README → *MCP server*, ADR in `decisions.md` |
+> | Durable job queue with backoff and a dead letter queue | ADR-019, ADR-020 |
+> | Fulfillment Agent and the dropship pipeline | `agents.md`, README → *Fulfilment* |
+> | Live Printful supplier, draft orders only | ADR-021 |
+> | Customer replies grounded in real order state | `agents.md` → *Replies are grounded* |
+> | Shared-password gate and container deployment | ADR-022, README → *Deploying* |
+>
+> §3.1 is also reversed: a hosted model is now the primary reasoning path and the
+> deterministic engine the fallback. ADR-016 records why and what constrains it.
+
 ---
 
 ## 1. Repository inspection (starting state)

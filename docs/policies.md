@@ -31,6 +31,8 @@ it becomes possible for a call to satisfy one and silently skip another.
 | `MKT-001` | marketing | Daily campaign budget movement | ₹10,000 | **Deny** |
 | `INV-001` | inventory | Reorder point adjustment bound | ±200 units | **Deny** |
 | `SEC-001` | security | Customer PII requires an explicit grant | — | **Deny** |
+| `FUL-001` | financial | Supplier submission retry limit | 3 attempts | Dead letter |
+| `FUL-002` | financial | Fulfilment auto-approval ceiling | ₹50,000 at supplier cost | Approval |
 | `BUD-001` | financial | Per-agent daily spend authority | Per agent | Approval |
 
 ### Why some breaches deny and others ask
@@ -42,6 +44,23 @@ it would mean the rule does not exist.
 
 `FIN-003` denies rather than asks because an action moving more than ₹5,00,000 in this
 system is a bug or an attack, not a business decision.
+
+### Fulfilment
+
+`FUL-002` uses the **supplier cost** of the order, not the price the customer paid: the
+cost is what the business owes a vendor, and the price is money it has already received.
+It matches `FIN-002`'s ceiling because both send money to a supplier, but carries its own
+id so a human reading the queue can tell which kind of commitment they are approving.
+
+`FUL-001` is not a governance decision but a queue one, and it is listed here because it
+is the rule that decides when a person gets involved: after three failed attempts the job
+is dead-lettered and the fulfilment is parked in `EXCEPTION`, holding the vendor's own
+error. A retry that has failed three times against the same vendor is not going to
+succeed on the fourth, and continuing to try hides the problem instead of surfacing it.
+
+An order with no supplier quote is denied outright rather than approved at ₹0 — see the
+note under `FIN-002` in `policies/governance.ts`. An action whose cost cannot be computed
+must not clear a money check by reporting zero.
 
 ### Suspected fraud
 
