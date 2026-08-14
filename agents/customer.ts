@@ -32,6 +32,18 @@ const Replies = z.object({
 
 type Theme = "payment" | "delivery" | "product" | "refund" | "advice" | "other";
 
+/** Tickets answered per run. Grounding is fetched for exactly this set. */
+const REPLY_BATCH = 6;
+
+/** What `get_order_status` returns; `summary` is the only line a customer sees. */
+interface OrderState {
+  orderId: string;
+  orderStatus: Order["status"];
+  paymentStatus: Order["paymentStatus"];
+  fulfillment: { status: string; supplierReference: string | null; trackingUrl: string | null } | null;
+  summary: string;
+}
+
 /**
  * Themes are scored by how many of their signals appear, not matched
  * first-to-win. "The item arrived damaged" contains a delivery word and a
@@ -71,6 +83,26 @@ export const customerAgent: Agent = {
       const tickets = await call<Ticket[]>("get_open_tickets");
       const themed = tickets.map((ticket) => ({ ticket, theme: classify(ticket) }));
 
+      // Live order state for every ticket this run will reply to. A reply about
+      // a delivery is only honest if it is written against the fulfilment row
+      // rather than against an assumption of how orders usually go — so the set
+      // fetched here is exactly the set answered below, never a prefix of it.
+      const answering = themed.slice(0, REPLY_BATCH);
+      const withOrder = answering.filter(({ ticket }) => ticket.orderId);
+      const states = new Map<string, OrderState>();
+      for (const { ticket } of withOrder) {
+        try {
+          states.set(ticket.orderId!, await call<OrderState>("get_order_status", {
+            orderId: ticket.orderId!,
+          }));
+        } catch {
+          // An order that cannot be read leaves the reply ungrounded, which the
+          // templates and the prompt both handle by not claiming a status.
+        }
+      }
+      const stateFor = (ticket: Ticket) =>
+        (ticket.orderId ? states.get(ticket.orderId) : null) ?? null;
+
       const counts = themed.reduce<Record<string, number>>((acc, { theme }) => {
         acc[theme] = (acc[theme] ?? 0) + 1;
         return acc;
@@ -89,9 +121,9 @@ export const customerAgent: Agent = {
         )
           .map(([theme, n]) => `${theme} ${n}`)
           .join(", ")}.`,
-        replies: themed.slice(0, 6).map(({ ticket, theme }) => ({
+        replies: answering.map(({ ticket, theme }) => ({
           ticketId: ticket.id,
-          message: templateReply(ticket, theme),
+          message: templateReply(ticket, theme, stateFor(ticket)),
         })),
       };
 
@@ -107,6 +139,7 @@ export const customerAgent: Agent = {
             .map(({ ticket, theme }) =>
               [
                 `Ticket ${ticket.id} (theme: ${theme}, order: ${ticket.orderId ?? "none"})`,
+                `Observed order state: ${stateFor(ticket)?.summary ?? "unknown — none was retrievable"}`,
                 untrusted(`ticket:${ticket.id}`, `${ticket.subject}\n${ticket.body.slice(0, 180)}`),
               ].join("\n"),
             ),
@@ -115,6 +148,11 @@ export const customerAgent: Agent = {
           ``,
           `Write one reply per ticket, addressed to the customer. State the systemic`,
           `issue separately if the queue shows one.`,
+          ``,
+          `The observed order state above is the ONLY thing you may tell a customer about`,
+          `where their order is. Do not mention couriers, warehouses, tracking numbers,`,
+          `delivery dates or replacements unless that line says so. Where it says the state`,
+          `is unknown, say you are checking — do not invent one.`,
         ].join("\n\n"),
         fallback: () => deterministic,
       });
@@ -122,8 +160,8 @@ export const customerAgent: Agent = {
       // Replies are low risk and carry no money, so they execute directly.
       const replyMap = new Map(value.replies.map((r) => [r.ticketId, r.message]));
       let answered = 0;
-      for (const { ticket, theme } of themed.slice(0, 6)) {
-        const message = replyMap.get(ticket.id) ?? templateReply(ticket, theme);
+      for (const { ticket, theme } of answering) {
+        const message = replyMap.get(ticket.id) ?? templateReply(ticket, theme, stateFor(ticket));
         const result = await mutate("reply_ticket", {
           ticketId: ticket.id,
           message,
@@ -168,6 +206,13 @@ export const customerAgent: Agent = {
       const observed = [
         evidence("Open tickets", String(tickets.length)),
         evidence("Answered this run", String(answered)),
+        evidence(
+          "Replies grounded in live order state",
+          `${states.size} of ${withOrder.length}`,
+          withOrder.length === states.size
+            ? "every reply about an order cites its retrieved state"
+            : "the rest say the status is being checked rather than guessing",
+        ),
         ...Object.entries(counts).map(([theme, n]) => evidence(`Theme — ${theme}`, String(n))),
       ];
 
@@ -184,16 +229,34 @@ export const customerAgent: Agent = {
     }),
 };
 
-function templateReply(ticket: Ticket, theme: Theme): string {
+/**
+ * Reply templates.
+ *
+ * These used to describe shipments the system had never observed — one told
+ * customers their parcel "has left our warehouse but the courier has not scanned
+ * it since", which was invented every time it was sent. Anything about where an
+ * order is now comes from `status.summary`, computed from the order and its
+ * fulfilment row, and a template that has no status says so instead of
+ * guessing.
+ */
+function templateReply(ticket: Ticket, theme: Theme, status: OrderState | null): string {
+  const state = status?.summary ?? null;
+
   switch (theme) {
     case "payment":
       return `Thanks for flagging this. We have a confirmed problem with card payments on mobile checkout and engineering is on it. Your card was not charged for the failed attempts — any pending holds drop off within 48 hours. Ordering from a desktop browser works in the meantime, and we will write to you as soon as mobile checkout is fixed.`;
     case "delivery":
-      return `Sorry about the wait. Your order ${ticket.orderId ?? ""} has left our warehouse but the courier has not scanned it since. We have opened a trace with them and will update you within 24 hours. If it has not moved by then we will reship at no cost.`;
+      return state
+        ? `Sorry about the wait — here is exactly where order ${ticket.orderId} stands. ${state} We will write to you the moment that changes, and if it stalls we will reship at no cost to you.`
+        : `Sorry about the wait. We are checking where this order has got to and will come back to you within 24 hours with its actual status rather than a guess.`;
     case "product":
-      return `That is not the condition it should reach you in, and we will put it right. We are arranging a replacement for order ${ticket.orderId ?? ""} and a free pickup for the item you received. You do not need to repack it in the original box.`;
+      return `That is not the condition it should reach you in, and we will put it right.${
+        state ? ` For order ${ticket.orderId}: ${state}` : ""
+      } Tell us whether you would rather have a replacement or a refund and we will arrange it — you do not need to repack the item in its original box.`;
     case "refund":
-      return `Your return is logged against order ${ticket.orderId ?? ""}. Refunds settle back to the original payment method within five working days of the item reaching our warehouse. If it has been longer than that, tell us and we will chase it directly.`;
+      return `Your return is logged against order ${ticket.orderId ?? ""}.${
+        state ? ` ${state}` : ""
+      } Refunds settle back to the original payment method within five working days of the item reaching our warehouse. If it has been longer than that, tell us and we will chase it directly.`;
     case "advice":
       return `Happy to help you choose. Tell us the budget you want to stay under and whether portability or screen size matters more, and we will send two or three specific options with the trade-offs between them.`;
     default:

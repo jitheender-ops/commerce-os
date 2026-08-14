@@ -45,7 +45,7 @@ import { getSupplier } from "@/integrations/supplier";
 import { FULFILLMENT_JOB } from "@/integrations/fulfillment-worker";
 import { formatMoney, marginPct, pct } from "@/lib/money";
 import { newId } from "@/lib/ids";
-import type { ToolDefinition } from "@/types";
+import type { Fulfillment, Order, ToolDefinition } from "@/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- a registry of tools with
    heterogeneous input/output types needs an existential type, which TypeScript
@@ -655,6 +655,44 @@ const getFulfillmentQueueTool = define({
   execute: ({ status }) => listFulfillments(status),
 });
 
+const getOrderStatusTool = define({
+  name: "get_order_status",
+  description:
+    "The live state of one order: payment, fulfilment, the supplier's reference and tracking if there is any. This is the only source for what a customer may be told about their order.",
+  input: z.object({ orderId: z.string() }),
+  output: z.any(),
+  permission: "READ_ORDERS",
+  risk: "LOW",
+  mutates: false,
+  execute: ({ orderId }) => {
+    const order = getOrder(orderId);
+    if (!order) throw new Error(`Unknown order ${orderId}`);
+    const fulfillment = getFulfillmentForOrder(orderId);
+
+    // No customer fields here on purpose: this feeds replies and model prompts,
+    // and the agent needs the order's state, never the person attached to it.
+    return {
+      orderId: order.id,
+      orderStatus: order.status,
+      paymentStatus: order.paymentStatus,
+      placedAt: order.createdAt,
+      fulfillment: fulfillment
+        ? {
+            status: fulfillment.status,
+            supplier: fulfillment.supplier,
+            supplierReference: fulfillment.externalId,
+            trackingUrl: fulfillment.trackingUrl,
+            attempts: fulfillment.attempts,
+            lastError: fulfillment.lastError,
+            simulated: fulfillment.simulated,
+          }
+        : null,
+      // Spelled out so neither a template nor a model has to infer it.
+      summary: describeOrderState(order.status, order.paymentStatus, fulfillment),
+    };
+  },
+});
+
 const fulfillOrderTool = define({
   name: "fulfill_order",
   description:
@@ -716,6 +754,44 @@ const fulfillOrderTool = define({
   },
 });
 
+/**
+ * One sentence describing where an order actually is.
+ *
+ * It exists so that nothing downstream — a reply template, a model prompt, the
+ * UI — has to guess. Every branch below corresponds to state the system can
+ * observe; there is no branch for "probably with the courier".
+ */
+function describeOrderState(
+  orderStatus: Order["status"],
+  paymentStatus: Order["paymentStatus"],
+  fulfillment: Fulfillment | null,
+): string {
+  if (paymentStatus === "REFUNDED") return "This order has been refunded.";
+  if (orderStatus === "CANCELLED") return "This order was cancelled.";
+  if (paymentStatus === "FAILED") return "Payment for this order did not go through, so it has not been sent to the supplier.";
+
+  if (!fulfillment) {
+    return "This order is paid and waiting to be sent to the supplier. It has not shipped.";
+  }
+
+  switch (fulfillment.status) {
+    case "PENDING_SUPPLIER":
+      return "This order is queued to go to the supplier and has not shipped yet.";
+    case "SUBMITTED":
+      return `The supplier has accepted this order${
+        fulfillment.externalId ? ` under reference ${fulfillment.externalId}` : ""
+      }. There is no tracking number yet.`;
+    case "SHIPPED":
+      return fulfillment.trackingUrl
+        ? `This order has shipped and can be tracked at ${fulfillment.trackingUrl}.`
+        : "This order has shipped. Tracking has not come back from the supplier yet.";
+    case "EXCEPTION":
+      return "This order failed to reach the supplier and is being handled by a person. It has not shipped.";
+    case "CANCELLED":
+      return "This order's fulfilment was cancelled.";
+  }
+}
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
 export const TOOLS: Record<string, RegisteredTool> = Object.fromEntries(
@@ -749,6 +825,7 @@ export const TOOLS: Record<string, RegisteredTool> = Object.fromEntries(
     createPurchaseOrderTool,
     receivePurchaseOrderTool,
     getFulfillmentQueueTool,
+    getOrderStatusTool,
     fulfillOrderTool,
   ].map((tool) => [tool.name, tool as RegisteredTool]),
 );
