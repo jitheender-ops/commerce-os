@@ -114,7 +114,10 @@ async function runJob(job: QueuedJob): Promise<void> {
       return;
     }
 
-    const delay = backoffMs(job.attempts);
+    // A vendor that tells us when to come back is more accurate than any
+    // schedule we could compute, so `retryAfterMs` on the error wins.
+    const advised = (error as { retryAfterMs?: unknown }).retryAfterMs;
+    const delay = typeof advised === "number" && advised > 0 ? advised : backoffMs(job.attempts);
     getDb().run(
       `UPDATE job_queue SET status = 'READY', last_error = ?, run_after = ?, updated_at = ?
        WHERE id = ?`,

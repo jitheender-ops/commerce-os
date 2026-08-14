@@ -11,6 +11,7 @@
  * same three methods and changes nothing above this file.
  */
 import { newId } from "@/lib/ids";
+import { printfulFromEnv } from "./printful";
 
 /**
  * No recipient here yet, deliberately. A live vendor needs a name and address,
@@ -62,7 +63,9 @@ class SimulatedSupplier implements SupplierGateway {
 const globalRef = globalThis as unknown as { __commerceSupplier?: SupplierGateway };
 
 export function getSupplier(): SupplierGateway {
-  globalRef.__commerceSupplier ??= new SimulatedSupplier();
+  // Same selection rule as the AI gateway: the live implementation is used only
+  // when it is fully configured, and the deterministic one is always available.
+  globalRef.__commerceSupplier ??= printfulFromEnv() ?? new SimulatedSupplier();
   return globalRef.__commerceSupplier;
 }
 
@@ -77,7 +80,7 @@ export function describeSupplier(): { label: string; live: boolean; detail: stri
     label: supplier.label,
     live: supplier.live,
     detail: supplier.live
-      ? "Orders are submitted to a real supplier API. Identifiers come from the vendor."
+      ? "Orders are submitted to Printful as drafts and identified by Printful's own order id. A draft is never charged and is never picked up for fulfilment; confirming one is a separate API call this system does not implement."
       : "No supplier credentials configured. Orders are recorded locally and identified as SUP_DEMO_*; nothing is sent anywhere.",
   };
 }

@@ -106,6 +106,21 @@ describe("retry and the dead letter queue", () => {
     expect(attempts).toBe(MAX_ATTEMPTS);
   });
 
+  it("waits as long as the vendor asked when the error carries retryAfterMs", async () => {
+    registerJobHandler("test.rate-limited", () => {
+      throw Object.assign(new Error("rate limited"), { retryAfterMs: 30_000 });
+    });
+
+    const job = enqueue("test.rate-limited", {});
+    const before = Date.now();
+    await runDueJobs();
+
+    // 30s from the vendor, not the 2s the backoff schedule would have chosen.
+    const stored = listJobs().find((j) => j.id === job.id)!;
+    expect(stored.status).toBe("READY");
+    expect(stored.runAfter - before).toBeGreaterThanOrEqual(29_000);
+  });
+
   it("dead-letters a permanent failure on the first attempt", async () => {
     let attempts = 0;
     registerJobHandler("test.permanent", () => {

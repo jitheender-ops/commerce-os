@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import {
   Activity, BadgeCheck, BarChart3, Boxes, Brain, Cpu, Gauge,
-  LineChart, Megaphone, Package, ScrollText, Settings, ShieldCheck, Sparkles,
-  Truck, Users, Wallet,
+  LineChart, Megaphone, Package, PackageCheck, ScrollText, Settings, ShieldCheck,
+  Sparkles, Truck, Users, Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -28,6 +28,7 @@ const NAV: { group: string; items: { href: string; label: string; icon: typeof G
       { href: "/marketing", label: "Marketing", icon: Megaphone },
       { href: "/customers", label: "Customers", icon: Users },
       { href: "/procurement", label: "Procurement", icon: Truck },
+      { href: "/fulfillment", label: "Fulfilment", icon: PackageCheck },
       { href: "/finance", label: "Finance", icon: Wallet },
       { href: "/products", label: "Catalogue", icon: Package },
     ],

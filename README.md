@@ -250,6 +250,29 @@ deterministic implementation that always works offline, and a live one used only
 credentials are present. Without them, submissions are recorded locally and identified
 as `SUP_DEMO_*` — the UI and the tool output both say so, and no supplier is contacted.
 
+### Printful
+
+Set the `PRINTFUL_*` values in [.env.example](.env.example) and orders are submitted to
+Printful for real, returning Printful's own order id.
+
+**Draft orders only, enforced in code.** Printful creates orders in draft, and its
+documentation is explicit that drafts "won't be charged, and they won't be picked up by
+our fulfillment facilities". Confirming a draft is a separate API call that
+`integrations/printful.ts` deliberately does not implement — there is no path from an
+agent to a garment being printed or a card being charged, and a test asserts the request
+never mentions confirmation. There is no Printful sandbox; drafts in a live account are
+the honest equivalent, which is why that guarantee is a property of the code rather than
+of a test endpoint.
+
+Two simplifications, stated rather than hidden: every seeded SKU maps to one configured
+catalog variant, because a generated catalogue has no real Printful equivalent; and the
+recipient is a fixed address you configure, never a customer's — `SupplierOrderRequest`
+cannot carry customer data, so the PII that `SEC-001` restricts cannot reach a vendor.
+
+Failures are classified rather than blindly retried: a 429 waits exactly as long as
+Printful's `retry-after` header asks, a 5xx or timeout retries with backoff, and a 4xx is
+dead-lettered immediately because sending the same rejected request again cannot help.
+
 ---
 
 ## MCP server
