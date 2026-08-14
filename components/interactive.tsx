@@ -67,6 +67,12 @@ export function ApprovalQueue({ initial }: { initial: (Approval & { policy?: { i
   return (
     <div className="space-y-3">
       {outcome && <Outcome outcome={outcome} />}
+      {/* Operators and judges ask the same question before clicking Approve.
+          Answer it next to the button, not in the README. */}
+      <p className="px-1 text-[11px]" style={{ color: "var(--ink-3)" }}>
+        Approving executes against the simulated business only — no supplier, payment
+        processor or ad platform is contacted, and no real money moves.
+      </p>
       {approvals.map((approval) => (
         <Panel
           key={approval.id}

@@ -5,7 +5,7 @@
  * would be a cycle). It reads the few facts it needs directly, through this
  * file, which keeps the dependency explicit and easy to stub in tests.
  */
-export { getProduct, getAgentBudget } from "@/database/queries";
+export { getProduct, getAgentBudget, getSupplierQuotes } from "@/database/queries";
 import { getProduct } from "@/database/queries";
 import { marginPct } from "@/lib/money";
 

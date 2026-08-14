@@ -7,7 +7,7 @@ import { callTool } from "@/tools/executor";
 import { evaluate } from "@/policies/governance";
 import { getTool } from "@/tools/definitions";
 import { seedDemo } from "@/simulation/seed";
-import { getProduct, listOrders, listProducts } from "@/database/queries";
+import { getProduct, getSupplierQuotes, listOrders, listProducts } from "@/database/queries";
 import { newCorrelationId } from "@/lib/ids";
 import type { ToolContext } from "@/types";
 
@@ -64,6 +64,35 @@ describe("input validation", () => {
       ctx("procurement"),
     );
     expect(result.status).toBe("DENIED");
+  });
+
+  it("denies an order no supplier has quoted rather than pricing it at ₹0", async () => {
+    // Without a quote the cost is unknown, and an unknown cost reads as ₹0 —
+    // which would clear every money check and reach a human as a "₹0" approval
+    // that fails the moment they approve it.
+    const quoted = listProducts(50).find((p) => getSupplierQuotes(p.id).length > 0)!;
+    const quotedBy = new Set(getSupplierQuotes(quoted.id).map((q) => q.supplierId));
+    const stranger = ["sup_01", "sup_02", "sup_03"].find((id) => !quotedBy.has(id))!;
+
+    const result = await callTool(
+      "create_purchase_order",
+      { productId: quoted.id, supplierId: stranger, quantity: 200, reason: "test" },
+      ctx("procurement"),
+    );
+
+    expect(result.status).toBe("DENIED");
+    expect(result.governance.decision).toBe("DENY");
+    expect(result.governance.reasons.some((r) => r.policyId === "FIN-002")).toBe(true);
+  });
+
+  it("denies a purchase order for a product that does not exist", async () => {
+    const result = await callTool(
+      "create_purchase_order",
+      { productId: "prd_01", supplierId: "sup_01", quantity: 200, reason: "test" },
+      ctx("procurement"),
+    );
+    expect(result.status).toBe("DENIED");
+    expect(result.governance.financialImpactPaise).toBe(0);
   });
 });
 

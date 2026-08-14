@@ -14,7 +14,7 @@
  * No model is consulted. Every decision below is deterministic code.
  */
 import { AGENTS } from "@/agents/definitions";
-import { getAgentBudget, getProduct, marginOf } from "./lookups";
+import { getAgentBudget, getProduct, getSupplierQuotes, marginOf } from "./lookups";
 import { POLICY_LIMITS } from "./rules";
 import { marginPct } from "@/lib/money";
 import type {
@@ -244,6 +244,23 @@ function policyChecks(
     }
 
     case "create_purchase_order": {
+      // An order the supplier has not quoted has no computable cost, and
+      // `financialImpactPaise` reports an uncosted order as ₹0 — which would
+      // sail through every money check below and reach a human as a "₹0"
+      // approval that fails on execution. Deny it here, where the reason is
+      // legible, rather than downstream where it is an exception.
+      const { productId, supplierId } = input as { productId: string; supplierId: string };
+      if (!getSupplierQuotes(productId).some((quote) => quote.supplierId === supplierId)) {
+        return [
+          {
+            check: "POLICY",
+            decision: "DENY",
+            policyId: "FIN-002",
+            message: `No quote from ${supplierId} for ${productId} — the cost of this order is unknown`,
+          },
+        ];
+      }
+
       if (financialImpactPaise > financial.maxAutoPurchaseOrderPaise) {
         reasons.push({
           check: "POLICY",

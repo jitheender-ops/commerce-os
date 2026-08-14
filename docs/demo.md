@@ -108,8 +108,31 @@ Settings → Policies. Then:
 
 Optional, if asked how it's enforced:
 
-> "`npm test` — 54 tests. Eight agents each try a tool they don't have permission for.
+> "`npm test` — 74 tests. Every agent tries a tool it doesn't have permission for.
 > All denied, by code, before any policy even runs."
+
+---
+
+## 4b · An outside agent gets the same door (45s) — optional
+
+Only if the room cares about interoperability. `npm run mcp` exposes the same tool
+registry over MCP, and any MCP client — Claude Code, Claude Desktop — can drive it.
+
+> "This isn't a closed system. An external agent connects over MCP and gets the *same*
+> governed tools. It doesn't get a bypass, and it doesn't get an identity of its own: it
+> borrows one of these seven agents, and that agent's permissions become its permissions.
+> The default binding is read-only."
+
+Then show the write path landing in the queue:
+
+```bash
+MCP_AGENT_ID=procurement npm run mcp
+```
+
+> "Bound to Procurement, an outside agent raises a large purchase order — and gets back
+> PENDING_APPROVAL. It's sitting in the same human queue, with the same decision trace.
+> The audit log tags it with an `mcp_` correlation id, so you can always tell an external
+> caller from an internal agent."
 
 ---
 
@@ -120,10 +143,13 @@ Simulator → **Start hackathon demo**.
 Six narrated steps: baseline → three faults injected → investigation → supply response →
 governance → verification.
 
-Land on the **Governance** step:
+Land on the **Governance** step and **read the counts off the screen** — with a hosted
+model the agents propose a different mix each run, so don't recite a memorised number. A
+typical run reads *"10 actions attempted: 1 executed, 5 sent to a human, 4 blocked."*
 
-> "Seven actions attempted. Two executed on their own — both inside policy and inside
-> the agent's autonomy. Five went to a human. Zero blocked."
+> "Everything inside policy and inside the agent's autonomy executed on its own. Everything
+> above a limit went to a human. And the blocked ones were blocked outright — those are
+> above the hard ceiling, which is the line no approval can cross."
 
 Then **Verification**:
 
@@ -153,6 +179,8 @@ Then **Verification**:
 | Port 3000 taken | Next picks the next free port — check the terminal |
 | Activity feed empty | It only shows live events; trigger a scenario |
 | An agent errors | It's designed for it — the task retries once, then the plan reports the failure and continues |
+| Venue wifi dies mid-demo | Nothing breaks. The hosted model drops to the deterministic engine and the badge changes; every figure and decision is identical. Only the prose gets plainer |
+| You want run-to-run identical output | Set `AI_PROVIDER=deterministic` in `.env.local` before you start. The hosted model varies its proposals; the deterministic engine does not |
 
 ## Questions you should expect
 
@@ -171,3 +199,9 @@ prompt.
 **"What's fake?"** — Payments, suppliers and ad platforms are simulated and labelled.
 Visual search isn't implemented, deliberately — there's no honest version without a
 vision model. It's listed in the README under *Not implemented*.
+
+**"When you click Approve, does something actually get bought?"** — No, and the app says
+so above the approve button. There is no supplier API, no payment processor and no ad
+platform anywhere in the code — a purchase order writes a row and credits stock when it
+"arrives", refunds mint a `TXN_DEMO_*` identifier. Nothing leaves the process, so the
+demo cannot spend money even by accident.

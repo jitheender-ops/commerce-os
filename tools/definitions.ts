@@ -570,7 +570,8 @@ const getSupplierQuotesTool = define({
 
 const createPurchaseOrderTool = define({
   name: "create_purchase_order",
-  description: "Raises a purchase order with a supplier. Above ₹50,000 this requires human approval.",
+  description:
+    "Raises a purchase order with a supplier. Simulated — no supplier is contacted and no money moves. Above ₹50,000 this requires human approval.",
   input: z.object({
     productId: z.string(),
     supplierId: z.string(),
@@ -606,7 +607,12 @@ const createPurchaseOrderTool = define({
       expectedAt: expected.toISOString(),
     });
     // Stock is credited on arrival, not on order.
-    return { ...po, reason, note: "Stock will be credited when the order is received" };
+    return {
+      ...po,
+      reason,
+      simulated: true,
+      note: "SIMULATED — no supplier is contacted and no money moves. Stock is credited when the order is received.",
+    };
   },
 });
 
