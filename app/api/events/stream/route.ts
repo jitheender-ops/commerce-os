@@ -30,7 +30,10 @@ export async function GET(request: Request) {
         }
       };
 
-      send({ type: "STREAM_OPEN", createdAt: new Date().toISOString() });
+      // Every consumer treats a frame as a BusinessEvent, and a BusinessEvent
+      // always has a payload. Omitting it here shipped an object that lied
+      // about its own type and threw in the first consumer that trusted it.
+      send({ type: "STREAM_OPEN", payload: {}, createdAt: new Date().toISOString() });
 
       const unsubscribe = getBus().subscribe("*", (event) => send(event));
       const heartbeat = setInterval(() => {

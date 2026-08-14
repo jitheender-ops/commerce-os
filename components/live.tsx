@@ -24,6 +24,10 @@ function subscribe(listener: Listener): () => void {
     source.onmessage = (message) => {
       try {
         const event = JSON.parse(message.data) as BusinessEvent;
+        // Consumers read event.payload without checking. Normalise it here, at
+        // the one point every frame passes through, instead of guarding in each
+        // of them — a single bad frame should never blank the page.
+        if (!event.payload || typeof event.payload !== "object") event.payload = {};
         for (const fn of listeners) fn(event);
       } catch {
         // A malformed frame should not tear down the stream.
