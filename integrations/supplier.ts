@@ -52,7 +52,10 @@ class SimulatedSupplier implements SupplierGateway {
       throw new Error("A fulfilment must contain at least one item");
     }
     return {
-      externalId: `SUP_DEMO_${newId("f").split("_")[1]}`,
+      // The whole id, not just its timestamp component: two orders created in
+      // the same millisecond were being given the same supplier reference,
+      // which reads as one order counted twice.
+      externalId: newId("SUP_DEMO"),
       status: "SUBMITTED",
       trackingUrl: null,
       simulated: true,

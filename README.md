@@ -410,9 +410,9 @@ project reproducible for free. Use a container host instead.
 
 ## The demo
 
-**One click:** Simulator → **Start hackathon demo**. Six narrated steps, 5–7 minutes:
-baseline → three injected faults → investigation → supply response → governance →
-verification.
+**One click:** Simulator → **Start hackathon demo**. Seven narrated steps, 5–7 minutes:
+baseline → three injected faults → investigation → supply response → fulfilment →
+governance → verification.
 
 **Eight scenarios**, each a real deterministic data change that publishes an event:
 stockout · revenue drop · competitor price drop · campaign failure · supplier delay ·

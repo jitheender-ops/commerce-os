@@ -4,9 +4,14 @@
  */
 import { beforeEach, describe, expect, it } from "vitest";
 import { SCENARIOS, triggerScenario } from "@/simulation/scenarios";
-import { runDemoStory } from "@/simulation/story";
+import { DEMO_STEPS, runDemoStory } from "@/simulation/story";
 import { seedDemo } from "@/simulation/seed";
-import { getCampaignEfficiency, getStockoutRisks, listApprovals } from "@/database/queries";
+import {
+  getCampaignEfficiency,
+  getStockoutRisks,
+  listApprovals,
+  listFulfillments,
+} from "@/database/queries";
 
 beforeEach(() => {
   seedDemo();
@@ -99,13 +104,38 @@ describe("hackathon demo story", () => {
   it("runs every step and leaves work in the approval queue", async () => {
     const story = await runDemoStory({ reset: true });
 
-    expect(story.steps).toHaveLength(6);
+    expect(story.steps).toHaveLength(DEMO_STEPS.length);
+    // Steps are filled from DEMO_STEPS by index, so one inserted in the middle
+    // silently mislabels every step after it unless the indices move too.
+    // Comparing the keys in order is what catches that.
+    expect(story.steps.map((s) => s.key)).toEqual(DEMO_STEPS.map((s) => s.key));
     expect(story.steps.every((step) => step.summary.length > 0)).toBe(true);
-    expect(story.planIds.length).toBeGreaterThanOrEqual(2);
+    expect(story.planIds.length).toBeGreaterThanOrEqual(3);
 
     // The governance step is the point of the demo: some actions must be parked.
     expect(listApprovals("PENDING").length).toBeGreaterThan(0);
     expect(story.disclaimer).toContain("SIMULATED");
+  }, 90_000);
+
+  it("hands orders to the supplier and reports what came back", async () => {
+    const story = await runDemoStory({ reset: true });
+
+    const handed = listFulfillments();
+    expect(handed.length).toBeGreaterThan(0);
+
+    // The story drains the queue before it returns, so the supplier has already
+    // answered. A step that only reported "queued" would prove nothing about
+    // the pipeline working end to end.
+    const accepted = handed.filter((f) => f.status === "SUBMITTED");
+    expect(accepted.length).toBeGreaterThan(0);
+    for (const fulfilment of accepted) {
+      expect(fulfilment.externalId).toMatch(/^SUP_DEMO_/);
+      expect(fulfilment.simulated).toBe(true);
+    }
+
+    const step = story.steps.find((s) => s.key === "fulfil")!;
+    expect(step.facts.some((f) => f.startsWith("ACCEPTED —"))).toBe(true);
+    expect(step.facts.some((f) => f.includes("Supplier:"))).toBe(true);
   }, 90_000);
 
   it("is reproducible — two runs reach the same measured baseline", async () => {

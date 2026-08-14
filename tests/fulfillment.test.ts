@@ -99,6 +99,26 @@ describe("submission", () => {
     expect(done.simulated).toBe(true);
   });
 
+  it("gives every order its own supplier reference", async () => {
+    // Two orders handed over in the same millisecond were given the same
+    // reference, because the id was built from its timestamp component alone.
+    // On screen that reads as one order counted twice.
+    const orders = listOrders(200).filter((o) => o.paymentStatus === "SUCCESS").slice(0, 5);
+    for (const order of orders) {
+      await callTool("fulfill_order", { orderId: order.id, reason: "batch" }, ctx("fulfillment"));
+    }
+    await runDueJobs(20);
+
+    // Not every order gets a row — one above the auto-approval limit parks
+    // instead, and a parked call never executes. What matters is that the ones
+    // which did reach the supplier came back distinguishable from each other.
+    const references = listFulfillments()
+      .map((f) => f.externalId)
+      .filter(Boolean);
+    expect(references.length).toBeGreaterThan(1);
+    expect(new Set(references).size).toBe(references.length);
+  });
+
   it("sends one order once, however many times it is asked", async () => {
     const order = paidOrder();
     const first = await callTool(

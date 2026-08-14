@@ -46,7 +46,10 @@ export const fulfillmentAgent: Agent = {
 
       const recommendations: Recommendation[] = awaiting.map((order) =>
         recommendation("fulfillment", {
-          title: `Fulfil ${order.id} — ${formatMoney(order.totalPaise)}`,
+          // The supplier cost, because that is what FUL-002 and the budget
+          // check measure. Showing the customer's price here made a ₹62,190
+          // line look as though it had executed under a ₹50,000 limit.
+          title: `Fulfil ${order.id} — ${formatMoney(order.costPaise)} to the supplier`,
           rationale:
             `Paid on ${order.channel}, ${formatMoney(order.totalPaise)} to the customer and ` +
             `${formatMoney(order.costPaise)} owed to the supplier. Not yet handed over.`,

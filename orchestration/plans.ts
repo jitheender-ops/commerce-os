@@ -113,6 +113,22 @@ export const PLAN_TEMPLATES: PlanTemplate[] = [
     ],
   },
   {
+    id: "fulfilment_run",
+    title: "Get paid orders to the supplier",
+    // Neither trigger has a publisher in this simulation — a real storefront is
+    // what fires them. They are declared because they are the correct triggers
+    // for this plan, and it is reachable today by intent and from the scripted
+    // demo. A template nobody can reach would be dead weight; one whose trigger
+    // is honest about where it would come from is a seam.
+    triggers: ["PAYMENT_SUCCESS", "ORDER_CREATED"],
+    metrics: [],
+    intents: ["fulfil", "fulfill", "dispatch", "ship orders", "handover", "supplier"],
+    tasks: [
+      { key: "handover", agentId: "fulfillment", title: "Hand paid orders to the supplier", dependsOn: [] },
+      { key: "decide", agentId: "ceo", title: "Review the fulfilment position", dependsOn: ["handover"] },
+    ],
+  },
+  {
     id: "full_business_review",
     title: "Full business review",
     triggers: [],

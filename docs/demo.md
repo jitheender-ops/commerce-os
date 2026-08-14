@@ -140,8 +140,26 @@ MCP_AGENT_ID=procurement npm run mcp
 
 Simulator → **Start hackathon demo**.
 
-Six narrated steps: baseline → three faults injected → investigation → supply response →
-governance → verification.
+Seven narrated steps: baseline → three faults injected → investigation → supply response →
+**fulfilment** → governance → verification.
+
+Stop on **Fulfilment** — it is the only step whose work leaves the process:
+
+> "The agent proposes handing paid orders to the supplier. Governance decides each one at
+> the *supplier's* cost, not the customer's price. Then a queue worker makes the call, and
+> what you're reading are the references the supplier gave back — one per order. Nothing
+> here waited on the vendor: the tool committed the intent and returned, so a slow
+> supplier can't stall an agent, and a failed call retries instead of vanishing."
+
+If asked what happens when the supplier is down:
+
+> "Three attempts with backoff, then the job is dead-lettered and the order is parked as
+> an exception carrying the vendor's own error. A fourth attempt against a dead vendor
+> hides the fault instead of fixing it. That queue is on the Fulfilment page."
+
+With `PRINTFUL_*` configured those references come from Printful instead, as **draft**
+orders — never charged, never fulfilled, and confirming one is an API call this system
+does not implement.
 
 Land on the **Governance** step and **read the counts off the screen** — with a hosted
 model the agents propose a different mix each run, so don't recite a memorised number. A
@@ -179,6 +197,7 @@ Then **Verification**:
 | Port 3000 taken | Next picks the next free port — check the terminal |
 | Activity feed empty | It only shows live events; trigger a scenario |
 | An agent errors | It's designed for it — the task retries once, then the plan reports the failure and continues |
+| Fulfilment step shows nothing | Every paid order was already handed over. `npm run reset-demo` clears the pipeline |
 | Venue wifi dies mid-demo | Nothing breaks. The hosted model drops to the deterministic engine and the badge changes; every figure and decision is identical. Only the prose gets plainer |
 | You want run-to-run identical output | Set `AI_PROVIDER=deterministic` in `.env.local` before you start. The hosted model varies its proposals; the deterministic engine does not |
 
