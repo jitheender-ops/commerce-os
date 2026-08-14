@@ -1,5 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { seedDemo } from "@/simulation/seed";
+import { ensureSeeded, seedDemo } from "@/simulation/seed";
+import { AGENTS } from "@/agents/definitions";
+import { getDb } from "@/database/db";
 import {
   getBusinessSummary,
   getDailyMetrics,
@@ -66,6 +68,37 @@ describe("deterministic seed", () => {
     expect(risks.length).toBe(50);
     expect(risks.some((r) => r.risk === "HIGH" || r.risk === "CRITICAL")).toBe(true);
     expect(risks.some((r) => r.risk === "LOW")).toBe(true);
+  });
+
+  /**
+   * Every other test here seeds a fresh database, which is exactly why none of
+   * them could catch this: an agent added after a database was seeded has a
+   * definition in code and no row in the table, and its first metrics write
+   * dies on a foreign key. Only an upgrade hits it, so an upgrade is what this
+   * simulates.
+   */
+  it("gives an agent added after seeding its rows", () => {
+    const db = getDb();
+    db.run(`DELETE FROM agents WHERE id = ?`, "fulfillment");
+    expect(db.get(`SELECT id FROM agents WHERE id = ?`, "fulfillment")).toBeUndefined();
+
+    ensureSeeded();
+
+    expect(db.get(`SELECT id FROM agents WHERE id = ?`, "fulfillment")).toBeTruthy();
+    expect(
+      db.get(`SELECT agent_id FROM agent_metrics WHERE agent_id = ?`, "fulfillment"),
+    ).toBeTruthy();
+    expect(
+      db.all(`SELECT permission FROM agent_permissions WHERE agent_id = ?`, "fulfillment"),
+    ).toHaveLength(AGENTS.fulfillment.permissions.length);
+
+    // And it adds nothing when every agent is already present.
+    ensureSeeded();
+    const count = db.get<{ n: number }>(
+      `SELECT COUNT(*) AS n FROM agents WHERE id = ?`,
+      "fulfillment",
+    );
+    expect(Number(count?.n)).toBe(1);
   });
 
   it("ranks the catalogue against a shopper's stated need", () => {

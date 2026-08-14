@@ -10,6 +10,7 @@ import { z } from "zod";
 import {
   adjustStock,
   answerTicket,
+  createFulfillment,
   createPurchaseOrder,
   forecastDemand,
   getBusinessSummary,
@@ -17,6 +18,7 @@ import {
   getCampaignEfficiency,
   getChannelBreakdown,
   getDailyMetrics,
+  getFulfillmentForOrder,
   getInventoryItem,
   getOrder,
   getProduct,
@@ -25,6 +27,7 @@ import {
   getStockoutRisks,
   getSupplierQuotes,
   listCampaigns,
+  listFulfillments,
   listOrders,
   listProducts,
   listTickets,
@@ -37,6 +40,9 @@ import {
   updateProductPrice,
 } from "@/database/queries";
 import { recommendProducts } from "@/memory/vector";
+import { enqueue } from "@/events/queue";
+import { getSupplier } from "@/integrations/supplier";
+import { FULFILLMENT_JOB } from "@/integrations/fulfillment-worker";
 import { formatMoney, marginPct, pct } from "@/lib/money";
 import { newId } from "@/lib/ids";
 import type { ToolDefinition } from "@/types";
@@ -631,6 +637,85 @@ const receivePurchaseOrderTool = define({
   }),
 });
 
+// ─── Fulfillment ─────────────────────────────────────────────────────────────
+
+const getFulfillmentQueueTool = define({
+  name: "get_fulfillment_queue",
+  description:
+    "Orders awaiting or undergoing supplier fulfilment, with attempt counts and the last error for anything stuck.",
+  input: z.object({
+    status: z
+      .enum(["PENDING_SUPPLIER", "SUBMITTED", "SHIPPED", "EXCEPTION", "CANCELLED"])
+      .optional(),
+  }),
+  output: z.any(),
+  permission: "READ_ORDERS",
+  risk: "LOW",
+  mutates: false,
+  execute: ({ status }) => listFulfillments(status),
+});
+
+const fulfillOrderTool = define({
+  name: "fulfill_order",
+  description:
+    "Hands a paid order to the dropshipping supplier. Commits the request and queues the supplier call; it does not wait for the vendor.",
+  input: z.object({
+    orderId: z.string(),
+    reason: z.string().min(4),
+  }),
+  output: z.any(),
+  permission: "WRITE_FULFILLMENT",
+  risk: "MEDIUM",
+  mutates: true,
+  // The supplier is paid the cost of goods, not the price the customer paid.
+  // Routing that through governance is what puts a large fulfilment in front of
+  // a human before anything is sent to a vendor.
+  financialImpactPaise: ({ orderId }) => getOrder(orderId)?.costPaise ?? 0,
+  execute: ({ orderId, reason }, ctx) => {
+    const order = getOrder(orderId);
+    if (!order) throw new Error(`Unknown order ${orderId}`);
+    if (order.paymentStatus !== "SUCCESS") {
+      throw new Error(`Order ${orderId} is not paid (payment ${order.paymentStatus})`);
+    }
+
+    // One fulfilment per order. Without this, a retried plan or two agents
+    // reaching the same conclusion would send the supplier the same order twice.
+    const existing = getFulfillmentForOrder(orderId);
+    if (existing && existing.status !== "CANCELLED") {
+      return {
+        fulfillmentId: existing.id,
+        orderId,
+        status: existing.status,
+        deduplicated: true,
+        note: "This order is already with the supplier; no second request was made.",
+      };
+    }
+
+    const fulfillment = createFulfillment({
+      id: newId("ful"),
+      orderId,
+      supplier: getSupplier().label,
+    });
+    const job = enqueue(
+      FULFILLMENT_JOB,
+      { fulfillmentId: fulfillment.id, orderId },
+      { correlationId: ctx.correlationId },
+    );
+
+    return {
+      fulfillmentId: fulfillment.id,
+      orderId,
+      jobId: job.id,
+      status: fulfillment.status,
+      reason,
+      supplier: getSupplier().label,
+      note: getSupplier().live
+        ? "Queued for submission to a live supplier."
+        : "SIMULATED — no supplier is contacted. Queued and recorded locally.",
+    };
+  },
+});
+
 // ─── Registry ────────────────────────────────────────────────────────────────
 
 export const TOOLS: Record<string, RegisteredTool> = Object.fromEntries(
@@ -663,6 +748,8 @@ export const TOOLS: Record<string, RegisteredTool> = Object.fromEntries(
     getSupplierQuotesTool,
     createPurchaseOrderTool,
     receivePurchaseOrderTool,
+    getFulfillmentQueueTool,
+    fulfillOrderTool,
   ].map((tool) => [tool.name, tool as RegisteredTool]),
 );
 

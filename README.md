@@ -1,6 +1,6 @@
 # Multi-Agent Commerce OS
 
-An operating layer for an online business, where seven specialised AI agents observe
+An operating layer for an online business, where eight specialised AI agents observe
 events, investigate with typed tools, collaborate on findings, and execute actions
 under a governance pipeline that decides — deterministically — what they may do alone
 and what needs a human.
@@ -63,10 +63,10 @@ None of that is scripted. It is computed from 2,109 seeded orders.
                           │  deterministic plan DAG     │
                           │  + task state machine       │
                           └──────────────┬──────────────┘
-        ┌───────────┬───────────┬────────┼────────┬───────────┬───────────┐
-        ▼           ▼           ▼        ▼        ▼           ▼           ▼
-      CEO      Analytics   Inventory  Pricing  Marketing  Customer   Procurement
-        └───────────┴───────────┴────────┼────────┴───────────┴───────────┘
+    ┌─────────┬─────────┬─────────┬───┼───┬─────────┬─────────┬─────────┐
+    ▼         ▼         ▼         ▼       ▼         ▼         ▼         ▼
+   CEO   Analytics Inventory  Pricing Marketing Customer Procurement Fulfilment
+    └─────────┴─────────┴─────────┴───┼───┴─────────┴─────────┴─────────┘
                                          │ typed tool calls only
    GOVERNANCE             ┌──────────────▼──────────────┐
                           │     Governance Pipeline     │
@@ -100,6 +100,7 @@ Full detail in [docs/architecture.md](docs/architecture.md).
 | **Marketing** | ROAS, budget reallocation | 2 | ₹10,000/day |
 | **Customer** | Tickets, refunds, systemic signals | 3 | ₹20,000/day |
 | **Procurement** | Supplier selection, purchase orders | 2 | ₹50,000/day |
+| **Fulfilment** | Dropship handover, supplier exceptions | 3 | ₹1,00,000/day |
 
 Each has its own objective, system instructions, tool surface and permission set.
 Permissions are the source of truth — the governance pipeline reads them on every call,
@@ -125,6 +126,8 @@ schema → permission → policy → risk → budget
 | `PRC-002` Maximum price step | 10% per change |
 | `MKT-001` Daily budget movement | ₹10,000 |
 | `INV-001` Reorder point change | ±200 units |
+| `FUL-001` Supplier retry limit | 3 attempts, then dead-lettered |
+| `FUL-002` Fulfilment auto-approval | ₹50,000 at supplier cost |
 | `BUD-001` Per-agent daily spend | Agent's own budget |
 
 Merged into one pipeline deliberately: when policy, risk and budget are separate
@@ -206,7 +209,7 @@ native module to compile and no database server to run.
 | --- | --- |
 | `npm run dev` | Development server |
 | `npm run build` / `npm start` | Production build and serve |
-| `npm test` | 72 tests — governance, security, agents, scenarios, MCP |
+| `npm test` | 94 tests — governance, security, agents, scenarios, MCP, queue, fulfilment |
 | `npm run typecheck` | Strict TypeScript, no `any` in domain code |
 | `npm run seed` | Seed if empty |
 | `npm run reset-demo` | Wipe and reseed to the exact starting state |
@@ -216,6 +219,36 @@ native module to compile and no database server to run.
 
 Everything is optional — see [.env.example](.env.example). With no `.env` file the
 system runs fully offline.
+
+---
+
+## Fulfilment
+
+The one path in this system that reaches outside the process, so it is the one built to
+assume the outside world fails.
+
+```
+Fulfillment Agent → fulfill_order → governance → fulfillments row (PENDING_SUPPLIER)
+                                                        │
+                                                   job_queue row
+                                                        │
+                                             worker → SupplierGateway → vendor
+                                                        │
+                                         3 failures, exponential backoff
+                                                        ▼
+                                          dead letter + EXCEPTION on the fulfilment
+```
+
+**The tool commits intent; the worker makes the call.** Network latency never enters the
+executor, and a failed submission retries instead of vanishing. **One order is handed
+over once** — a second request returns the existing fulfilment rather than shipping
+twice. **Large fulfilments stop for a human** under `FUL-002`, at supplier cost rather
+than customer price.
+
+`SupplierGateway` is the seam, and it follows the same shape as the AI gateway: a
+deterministic implementation that always works offline, and a live one used only when
+credentials are present. Without them, submissions are recorded locally and identified
+as `SUP_DEMO_*` — the UI and the tool output both say so, and no supplier is contacted.
 
 ---
 
@@ -295,7 +328,7 @@ Not supported as-is, and the gap is architectural rather than configuration:
 
 1. **SQLite would have to become hosted Postgres.** `DatabaseAdapter` in
    `database/db.ts` is the seam — deliberately narrow — but every query in
-   `database/queries.ts` and all 28 tables need porting.
+   `database/queries.ts` and all 30 tables need porting.
 2. **The in-process event bus does not survive multiple instances.** SSE would need
    replacing with a durable queue or polling.
 

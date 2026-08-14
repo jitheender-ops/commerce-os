@@ -15,7 +15,8 @@ export type AgentId =
   | "pricing"
   | "marketing"
   | "customer"
-  | "procurement";
+  | "procurement"
+  | "fulfillment";
 
 export type AgentStatus = "IDLE" | "THINKING" | "WORKING" | "WAITING" | "ERROR";
 
@@ -71,7 +72,8 @@ export type Permission =
   | "WRITE_REFUNDS"
   | "WRITE_CAMPAIGNS"
   | "WRITE_TICKETS"
-  | "WRITE_PLANS";
+  | "WRITE_PLANS"
+  | "WRITE_FULFILLMENT";
 
 // ─── Governance ──────────────────────────────────────────────────────────────
 
@@ -164,6 +166,10 @@ export type EventType =
   | "REVENUE_ANOMALY"
   | "COMPETITOR_PRICE_CHANGED"
   | "DEMAND_SPIKE"
+  | "FULFILLMENT_REQUESTED"
+  | "FULFILLMENT_SUBMITTED"
+  | "FULFILLMENT_FAILED"
+  | "FULFILLMENT_DEAD_LETTERED"
   // Internal lifecycle events, used by the live UI.
   | "AGENT_STATUS_CHANGED"
   | "AGENT_MESSAGE"
@@ -378,6 +384,54 @@ export interface OrderItem {
   productId: string;
   quantity: number;
   unitPricePaise: number;
+}
+
+// ─── Fulfillment ─────────────────────────────────────────────────────────────
+
+/**
+ * Dropshipping lifecycle, kept on `fulfillments` rather than on `orders`.
+ * `orders.status` feeds the revenue arithmetic the whole analysis rests on;
+ * widening its vocabulary would change numbers, not just labels.
+ */
+export type FulfillmentStatus =
+  | "PENDING_SUPPLIER"
+  | "SUBMITTED"
+  | "SHIPPED"
+  | "EXCEPTION"
+  | "CANCELLED";
+
+export interface Fulfillment {
+  id: string;
+  orderId: string;
+  /** The supplier's own identifier, once it has accepted the order. */
+  externalId: string | null;
+  supplier: string;
+  status: FulfillmentStatus;
+  trackingUrl: string | null;
+  attempts: number;
+  lastError: string | null;
+  /** True when no live supplier is configured and the submission was simulated. */
+  simulated: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Job queue ───────────────────────────────────────────────────────────────
+
+export type JobStatus = "READY" | "RUNNING" | "DONE" | "DEAD";
+
+export interface QueuedJob<P = Record<string, unknown>> {
+  id: string;
+  kind: string;
+  payload: P;
+  status: JobStatus;
+  attempts: number;
+  lastError: string | null;
+  /** Epoch milliseconds; a job is invisible to the worker until this passes. */
+  runAfter: number;
+  correlationId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Supplier {

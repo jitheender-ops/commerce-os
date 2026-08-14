@@ -204,6 +204,35 @@ stay under that limit.`,
     color: "#fb923c",
     delegatesTo: [],
   },
+
+  fulfillment: {
+    id: "fulfillment",
+    name: "Fulfillment Agent",
+    role: "Dropship fulfilment & exceptions",
+    objective:
+      "Get every paid order to the supplier exactly once, and surface the ones that did not make it.",
+    instructions: `You are the Fulfillment Agent.
+You hand paid orders to the dropshipping supplier and watch what happens next.
+You submit an order once. A fulfilment that already exists is finished work, not
+a reason to send it again — a duplicate submission is a real order shipped twice
+at the business's expense.
+You do not decide what to buy, what to charge or who to refund; those belong to
+other agents. Your subject is the pipeline: what is pending, what the supplier
+accepted, and what is stuck.
+Report a fulfilment that has exhausted its retries as an exception, quoting the
+supplier's own error text. Never describe an order as shipped unless the supplier
+returned an identifier for it.`,
+    tools: ["get_orders", "get_fulfillment_queue", "fulfill_order"],
+    permissions: ["READ_ORDERS", "READ_PRODUCTS", "WRITE_FULFILLMENT"],
+    // Level 3, unlike Procurement's 2. Fulfilling a paid order discharges an
+    // obligation the business already took money for; it is not new spend, and
+    // routing every order to a human would make the queue meaningless. Large
+    // fulfilments still stop: FUL-002 and the risk escalation both catch them.
+    autonomy: 3,
+    dailyBudgetPaise: rupees(1_00_000),
+    color: "#2dd4bf",
+    delegatesTo: [],
+  },
 };
 
 export const AGENT_IDS = Object.keys(AGENTS) as AgentId[];

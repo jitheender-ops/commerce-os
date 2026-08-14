@@ -279,6 +279,28 @@ function policyChecks(
       break;
     }
 
+    case "fulfill_order": {
+      // The same threshold as a purchase order, under its own policy id: both
+      // send money to a supplier, and a human reading the queue should be told
+      // which kind of commitment they are approving.
+      if (financialImpactPaise > financial.maxAutoPurchaseOrderPaise) {
+        reasons.push({
+          check: "POLICY",
+          decision: "REQUIRE_APPROVAL",
+          policyId: "FUL-002",
+          message: `Fulfilment cost exceeds the ₹50,000 auto-approval limit`,
+        });
+      } else {
+        reasons.push({
+          check: "POLICY",
+          decision: "ALLOW",
+          policyId: "FUL-002",
+          message: `Fulfilment within the auto-approval limit`,
+        });
+      }
+      break;
+    }
+
     case "propose_budget_change": {
       const { deltaPaise } = input as { deltaPaise: number };
       if (Math.abs(deltaPaise) > marketing.maxDailyBudgetChangePaise) {

@@ -83,6 +83,19 @@ export const POLICY_RULES: PolicyRule[] = [
     limit: "Explicit permission grant required",
   },
   {
+    id: "FUL-001",
+    category: "financial",
+    description:
+      "A supplier submission is retried, then dead-lettered rather than retried forever",
+    limit: "3 attempts, exponential backoff",
+  },
+  {
+    id: "FUL-002",
+    category: "financial",
+    description: "Fulfilments above the auto-approval limit require a human decision",
+    limit: "₹50,000 per order, at supplier cost",
+  },
+  {
     id: "BUD-001",
     category: "financial",
     description: "An agent may not exceed its daily spend authority",

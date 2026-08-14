@@ -1,6 +1,6 @@
 # Agents
 
-Seven agents, each with its own objective, instructions, tools, permissions, autonomy
+Eight agents, each with its own objective, instructions, tools, permissions, autonomy
 level and spend authority. None of them share a prompt or a code path beyond the shared
 runtime that handles status, tool calling and memory retrieval.
 
@@ -150,6 +150,35 @@ instructed never to split an order to stay under the limit.
 
 Needs come from the Inventory Agent when it ran earlier in the plan; otherwise the agent
 derives them itself, so it is useful when run alone.
+
+---
+
+## Fulfillment Agent — dropship handover and exceptions
+
+**Tools:** `get_orders`, `get_fulfillment_queue`, `fulfill_order`
+
+The only agent whose work reaches outside the process, and the design reflects that in
+three places.
+
+**It proposes; it does not send.** `fulfill_order` records the intent, writes a
+`fulfillments` row as `PENDING_SUPPLIER` and queues a job. The supplier call happens on
+the queue worker, so an agent run never blocks on a vendor's latency and a failed call
+retries instead of disappearing.
+
+**One order, one handover.** A fulfilment that already exists is returned as
+`deduplicated` rather than sent again. Two agents reaching the same conclusion, a
+replayed plan or a restarted worker would otherwise ship a real order twice at the
+business's expense.
+
+**Autonomy 3, unlike Procurement's 2.** Fulfilling a paid order discharges an obligation
+the business already took money for — it is not new spend, and routing every order to a
+human would make the approval queue meaningless. Large ones still stop: `FUL-002` sends
+anything above ₹50,000 of supplier cost to a human, and the risk escalation agrees.
+
+Retries are bounded by `FUL-001`: three attempts with exponential backoff, then the job
+is dead-lettered and the fulfilment is parked in `EXCEPTION` carrying the supplier's own
+error text. The agent reports those as exceptions rather than retrying them forever, and
+is instructed never to describe an order as shipped without a supplier identifier.
 
 ---
 

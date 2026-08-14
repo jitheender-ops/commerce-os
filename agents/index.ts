@@ -1,6 +1,7 @@
 import { analyticsAgent } from "./analytics";
 import { ceoAgent } from "./ceo";
 import { customerAgent } from "./customer";
+import { fulfillmentAgent } from "./fulfillment";
 import { inventoryAgent } from "./inventory";
 import { marketingAgent } from "./marketing";
 import { pricingAgent } from "./pricing";
@@ -16,6 +17,7 @@ export const AGENT_REGISTRY: Record<AgentId, Agent> = {
   marketing: marketingAgent,
   customer: customerAgent,
   procurement: procurementAgent,
+  fulfillment: fulfillmentAgent,
 };
 
 export const getAgentImpl = (id: AgentId): Agent => AGENT_REGISTRY[id];

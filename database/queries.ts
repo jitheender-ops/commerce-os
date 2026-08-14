@@ -15,6 +15,8 @@ import type {
   Campaign,
   Customer,
   DailyMetric,
+  Fulfillment,
+  FulfillmentStatus,
   InventoryItem,
   MemoryRecord,
   Order,
@@ -1066,6 +1068,123 @@ export function setState(key: string, value: string): void {
 export function getState(key: string): string | null {
   const row = getDb().get<{ value: string }>(`SELECT value FROM system_state WHERE key = ?`, key);
   return row?.value ?? null;
+}
+
+// ─── Fulfillment ─────────────────────────────────────────────────────────────
+
+type FulfillmentRow = {
+  id: string;
+  order_id: string;
+  external_id: string | null;
+  supplier: string;
+  status: string;
+  tracking_url: string | null;
+  attempts: number;
+  last_error: string | null;
+  simulated: number;
+  created_at: string;
+  updated_at: string;
+};
+
+const mapFulfillment = (r: FulfillmentRow): Fulfillment => ({
+  id: r.id,
+  orderId: r.order_id,
+  externalId: r.external_id,
+  supplier: r.supplier,
+  status: r.status as FulfillmentStatus,
+  trackingUrl: r.tracking_url,
+  attempts: num(r.attempts),
+  lastError: r.last_error,
+  simulated: Boolean(r.simulated),
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+});
+
+export function createFulfillment(input: {
+  id: string;
+  orderId: string;
+  supplier: string;
+}): Fulfillment {
+  const now = new Date().toISOString();
+  getDb().run(
+    `INSERT INTO fulfillments (id, order_id, external_id, supplier, status,
+        tracking_url, attempts, last_error, simulated, created_at, updated_at)
+     VALUES (?, ?, NULL, ?, 'PENDING_SUPPLIER', NULL, 0, NULL, 1, ?, ?)`,
+    input.id,
+    input.orderId,
+    input.supplier,
+    now,
+    now,
+  );
+  return getFulfillment(input.id)!;
+}
+
+export function getFulfillment(id: string): Fulfillment | null {
+  const row = getDb().get<FulfillmentRow>(`SELECT * FROM fulfillments WHERE id = ?`, id);
+  return row ? mapFulfillment(row) : null;
+}
+
+/** One order gets one fulfilment; this is what makes the tool idempotent. */
+export function getFulfillmentForOrder(orderId: string): Fulfillment | null {
+  const row = getDb().get<FulfillmentRow>(
+    `SELECT * FROM fulfillments WHERE order_id = ? ORDER BY created_at DESC LIMIT 1`,
+    orderId,
+  );
+  return row ? mapFulfillment(row) : null;
+}
+
+export function listFulfillments(status?: FulfillmentStatus, limit = 100): Fulfillment[] {
+  const rows = status
+    ? getDb().all<FulfillmentRow>(
+        `SELECT * FROM fulfillments WHERE status = ? ORDER BY created_at DESC LIMIT ?`,
+        status,
+        limit,
+      )
+    : getDb().all<FulfillmentRow>(
+        `SELECT * FROM fulfillments ORDER BY created_at DESC LIMIT ?`,
+        limit,
+      );
+  return rows.map(mapFulfillment);
+}
+
+export function updateFulfillment(
+  id: string,
+  patch: {
+    status?: FulfillmentStatus;
+    externalId?: string | null;
+    trackingUrl?: string | null;
+    lastError?: string | null;
+    simulated?: boolean;
+    bumpAttempts?: boolean;
+  },
+): void {
+  const sets: string[] = [`updated_at = ?`];
+  const params: (string | number | null)[] = [new Date().toISOString()];
+
+  const set = (column: string, value: string | number | null) => {
+    sets.push(`${column} = ?`);
+    params.push(value);
+  };
+
+  if (patch.status !== undefined) set("status", patch.status);
+  if (patch.externalId !== undefined) set("external_id", patch.externalId);
+  if (patch.trackingUrl !== undefined) set("tracking_url", patch.trackingUrl);
+  if (patch.lastError !== undefined) set("last_error", patch.lastError);
+  if (patch.simulated !== undefined) set("simulated", patch.simulated ? 1 : 0);
+  if (patch.bumpAttempts) sets.push(`attempts = attempts + 1`);
+
+  getDb().run(`UPDATE fulfillments SET ${sets.join(", ")} WHERE id = ?`, ...params, id);
+}
+
+/** The line items a supplier needs, resolved to SKUs. */
+export function getOrderLines(orderId: string): { sku: string; quantity: number }[] {
+  return getDb().all<{ sku: string; quantity: number }>(
+    `SELECT p.sku AS sku, oi.quantity AS quantity
+       FROM order_items oi
+       JOIN products p ON p.id = oi.product_id
+      WHERE oi.order_id = ?`,
+    orderId,
+  );
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────

@@ -467,4 +467,41 @@ export function needsSeed(): boolean {
 
 export function ensureSeeded(): void {
   if (needsSeed()) seedDemo();
+  ensureAgentRows();
+}
+
+/**
+ * Gives any agent added since the database was seeded its rows.
+ *
+ * `seedDemo` writes agent rows once, so a database seeded before an agent
+ * existed has no row for it, and the agent's first metrics write dies on a
+ * foreign key instead of on anything an operator can read. This is the
+ * row-level counterpart to `migrate()` in database/db.ts, which does the same
+ * job for columns.
+ */
+export function ensureAgentRows(): void {
+  const db = getDb();
+  const known = new Set(db.all<{ id: string }>(`SELECT id FROM agents`).map((row) => row.id));
+  const missing = AGENT_IDS.filter((id) => !known.has(id));
+  if (missing.length === 0) return;
+
+  db.transaction(() => {
+    for (const id of missing) {
+      const agent = AGENTS[id];
+      db.run(
+        `INSERT INTO agents (id, name, role, objective, autonomy, status, activity,
+            daily_budget_paise, budget_used_paise, last_active_at)
+         VALUES (?, ?, ?, ?, ?, 'IDLE', 'Idle', ?, 0, NULL)`,
+        agent.id, agent.name, agent.role, agent.objective, agent.autonomy,
+        agent.dailyBudgetPaise,
+      );
+      for (const permission of agent.permissions) {
+        db.run(
+          `INSERT OR IGNORE INTO agent_permissions (agent_id, permission) VALUES (?, ?)`,
+          agent.id, permission,
+        );
+      }
+      db.run(`INSERT OR IGNORE INTO agent_metrics (agent_id) VALUES (?)`, agent.id);
+    }
+  });
 }

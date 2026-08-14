@@ -315,10 +315,49 @@ CREATE TABLE IF NOT EXISTS system_state (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- Dropshipping fulfilment: one row per order handed to a supplier. Deliberately
+-- separate from orders.status, which feeds the revenue arithmetic and must not
+-- gain new states. attempts/last_error mirror the queue job so an operator can
+-- see why something is stuck without reading the queue table.
+CREATE TABLE IF NOT EXISTS fulfillments (
+  id           TEXT PRIMARY KEY,
+  order_id     TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  external_id  TEXT,
+  supplier     TEXT NOT NULL,
+  status       TEXT NOT NULL,
+  tracking_url TEXT,
+  attempts     INTEGER NOT NULL DEFAULT 0,
+  last_error   TEXT,
+  simulated    INTEGER NOT NULL DEFAULT 1,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_fulfillments_order ON fulfillments(order_id);
+CREATE INDEX IF NOT EXISTS idx_fulfillments_status ON fulfillments(status);
+
+-- The queue is a table, not a broker: one process, one writer, and jobs that
+-- survive a restart — which is what a Redis-less deployment needs. run_after
+-- carries the backoff; a job is invisible until it passes.
+CREATE TABLE IF NOT EXISTS job_queue (
+  id             TEXT PRIMARY KEY,
+  kind           TEXT NOT NULL,
+  payload        TEXT NOT NULL,
+  status         TEXT NOT NULL,
+  attempts       INTEGER NOT NULL DEFAULT 0,
+  last_error     TEXT,
+  run_after      INTEGER NOT NULL,
+  correlation_id TEXT NOT NULL,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_job_queue_due ON job_queue(status, run_after);
 `;
 
 /** Tables wiped by a demo reset, in dependency-safe order. */
 export const RESET_ORDER = [
+  "job_queue",
+  "fulfillments",
   "audit_logs",
   "approvals",
   "tasks",

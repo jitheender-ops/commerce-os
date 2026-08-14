@@ -7,6 +7,10 @@
 import { NextResponse } from "next/server";
 import { ZodError, type ZodType } from "zod";
 import { ensureSeeded } from "@/simulation/seed";
+import { startWorker } from "@/events/queue";
+// Registers the fulfillment job handler as a side effect of import. Without it
+// a queued fulfilment would have nothing to run it and would dead-letter.
+import "@/integrations/fulfillment-worker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,6 +18,8 @@ export const dynamic = "force-dynamic";
 /** First request on a fresh clone seeds the demo, so `npm run dev` is enough. */
 export function ready(): void {
   ensureSeeded();
+  // Idempotent and pinned to globalThis, so this is a no-op after the first call.
+  startWorker();
 }
 
 export function ok<T>(data: T, init?: ResponseInit): NextResponse {

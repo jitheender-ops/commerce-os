@@ -10,7 +10,7 @@ in the header. The seed is fixed, so your numbers will match this script.
 
 ## 0 · The frame (20s)
 
-> "This isn't an assistant on top of a dashboard. Seven agents run the business. They
+> "This isn't an assistant on top of a dashboard. Eight agents run the business. They
 > can't touch the database — they can only call typed tools, and every tool call goes
 > through a governance pipeline that decides what they may do alone and what needs me."
 
@@ -24,7 +24,7 @@ Point at the header badge: **Demo mode — Deterministic Business Engine**.
 
 ## 1 · Baseline (30s)
 
-The Command Center. Eight metrics, seven agents idle, the funnel twin, the agent graph.
+The Command Center. Eight metrics, eight agents idle, the funnel twin, the agent graph.
 
 > "A generated storefront: 50 products, 500 customers, 2,109 orders over 30 days. The
 > daily metrics are derived from those orders, not invented separately — which is why
@@ -108,7 +108,7 @@ Settings → Policies. Then:
 
 Optional, if asked how it's enforced:
 
-> "`npm test` — 74 tests. Every agent tries a tool it doesn't have permission for.
+> "`npm test` — 94 tests. Every agent tries a tool it doesn't have permission for.
 > All denied, by code, before any policy even runs."
 
 ---
@@ -120,7 +120,7 @@ registry over MCP, and any MCP client — Claude Code, Claude Desktop — can dr
 
 > "This isn't a closed system. An external agent connects over MCP and gets the *same*
 > governed tools. It doesn't get a bypass, and it doesn't get an identity of its own: it
-> borrows one of these seven agents, and that agent's permissions become its permissions.
+> borrows one of these eight agents, and that agent's permissions become its permissions.
 > The default binding is read-only."
 
 Then show the write path landing in the queue:

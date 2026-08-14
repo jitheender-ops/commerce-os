@@ -59,7 +59,7 @@ unparseable output — the fallback ships and the result is labelled
 ## Modules
 
 ```
-agents/         7 agents + shared runtime (status, tool callers, memory, untrusted wrapper)
+agents/         8 agents + shared runtime (status, tool callers, memory, untrusted wrapper)
 orchestration/  plan templates + the DAG walker and task state machine
 policies/       governance pipeline, policy limits, the read surface it needs
 tools/          tool definitions (zod in/out, permission, risk, financial impact) + executor
@@ -75,7 +75,7 @@ components/     UI primitives, live surfaces, charts, interactive panels
 ## Persistence
 
 SQLite through Node's built-in `node:sqlite` — no native compilation, no service.
-28 tables with foreign keys on and indexes on every foreign key plus
+30 tables with foreign keys on and indexes on every foreign key plus
 `events(created_at)`, `audit_logs(created_at)` and `orders(created_at)`.
 
 `DatabaseAdapter` (`database/db.ts`) is deliberately narrow — `all` / `get` / `run` /
@@ -126,7 +126,7 @@ relevant memories enter a prompt, never the whole store.
 | `EventBus` | In-process | Redis / NATS |
 | `VectorStore` | Lexical | Embeddings |
 | `AIProvider` | Deterministic, hosted | Any provider |
-| Tool registry | 28 tools | Add a definition; governance applies automatically |
+| Tool registry | 30 tools | Add a definition; governance applies automatically |
 | Plan templates | 7 templates | Add a template; triggers and intents route to it |
 | Agent transport | MCP over stdio | HTTP/SSE MCP, A2A |
 
