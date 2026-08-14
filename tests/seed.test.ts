@@ -57,10 +57,14 @@ describe("deterministic seed", () => {
     expect(decomposition.revenueChangePct).toBeLessThan(0);
     expect(decomposition.primaryDriver).toBe("Conversion rate");
 
-    const failures = decomposition.supporting.find(
-      (s) => s.label === "Mobile payment failures",
+    const failures = decomposition.supporting.find((s) =>
+      s.label.startsWith("Mobile payment failures"),
     );
     expect(failures?.detail).toMatch(/^\+/);
+    // The label has to say what it counts. Attempts and failed order rows are
+    // different quantities that sit next to each other on screen, and an
+    // external agent reading both once concluded the data contradicted itself.
+    expect(failures?.label).toContain("attempts");
   });
 
   it("produces inventory with a spread of stockout risk", () => {

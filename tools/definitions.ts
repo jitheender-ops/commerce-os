@@ -71,7 +71,8 @@ const getBusinessSummaryTool = define({
 
 const getDailyMetricsTool = define({
   name: "get_daily_metrics",
-  description: "Daily sessions, orders, revenue, COGS, ad spend, refunds and failure counts.",
+  description:
+    "Daily sessions, orders, revenue, COGS, ad spend, refunds, returns and failed payment ATTEMPTS. Attempts are not order rows — one shopper retrying a card five times is five attempts and at most one failed order. Compare with get_channel_breakdown only if you mean to compare two different things.",
   input: z.object({ days: z.number().int().min(1).max(90).default(30) }),
   output: z.any(),
   permission: "READ_ANALYTICS",
@@ -94,7 +95,8 @@ const getRevenueDecompositionTool = define({
 
 const getChannelBreakdownTool = define({
   name: "get_channel_breakdown",
-  description: "Orders, revenue and payment-failure rate split by sales channel.",
+  description:
+    "Orders, revenue and the share of ORDERS whose payment failed, split by channel. This counts order rows, not attempts — see get_daily_metrics for attempts.",
   input: z.object({ days: z.number().int().min(1).max(90).default(7) }),
   output: z.any(),
   permission: "READ_ANALYTICS",
@@ -122,7 +124,7 @@ const detectAnomaliesTool = define({
       { name: "Revenue", pick: (m) => m.revenuePaise, direction: "down" },
       { name: "Sessions", pick: (m) => m.sessions, direction: "down" },
       { name: "Conversion rate", pick: (m) => pct(m.orders, m.sessions), direction: "down" },
-      { name: "Mobile payment failures", pick: (m) => m.mobilePaymentFailures, direction: "up" },
+      { name: "Mobile payment failure attempts", pick: (m) => m.mobilePaymentFailures, direction: "up" },
       { name: "Returns", pick: (m) => m.returns, direction: "up" },
       { name: "Refunds", pick: (m) => m.refundsPaise, direction: "up" },
     ];

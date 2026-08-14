@@ -26,9 +26,15 @@ Point at the header badge: **Demo mode — Deterministic Business Engine**.
 
 The Command Center. Eight metrics, eight agents idle, the funnel twin, the agent graph.
 
-> "A generated storefront: 50 products, 500 customers, 2,124 orders over 30 days. The
-> daily metrics are derived from those orders, not invented separately — which is why
-> the decomposition you're about to see actually reconciles."
+> "A generated storefront: 50 products, 500 customers, 2,124 orders over 30 days.
+> Revenue, orders and cost are accumulated from those order rows rather than invented
+> separately — which is why the decomposition you're about to see actually reconciles."
+
+If someone spots that failed payment *attempts* (131 on the fault day) dwarf the failed
+*orders* in the channel breakdown, that is the right question and it has an answer:
+
+> "Different quantities. One counts attempts — a shopper retrying a card five times is
+> five of those — and the other counts order rows. Both tools say which they return."
 
 Point at the **Digital business twin**. Two stages read *not instrumented*.
 

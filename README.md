@@ -430,10 +430,13 @@ Presenter script: [docs/demo.md](docs/demo.md).
 Deterministically generated: 50 products · 500 customers · 2,124 orders over 30 days ·
 10 suppliers · 8 campaigns · 12 support tickets · 30 days of daily metrics.
 
-Daily metrics are *derived from the generated orders* rather than invented separately,
-which is what lets the revenue decomposition reconcile arithmetically. The most recent
-day carries a deliberate, discoverable fault — a mobile checkout regression. No agent
-knows about it; they find it by querying the data.
+**Revenue, orders, COGS and refunds are accumulated from the generated order rows**,
+which is what lets the revenue decomposition reconcile arithmetically. Sessions, failed
+payment *attempts* and returns are independent counters — a shopper retrying a card five
+times produces five attempts and at most one order row, so those two numbers are not
+meant to match, and the tools that return them say which they are. The most recent day
+carries a deliberate, discoverable fault: a mobile checkout regression. No agent knows
+about it; they find it by querying the data.
 
 ---
 

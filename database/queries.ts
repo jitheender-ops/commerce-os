@@ -679,7 +679,7 @@ export function getRevenueDecomposition(): RevenueDecomposition {
     primaryDriver: primary.name,
     supporting: [
       {
-        label: "Mobile payment failures",
+        label: "Mobile payment failures (attempts)",
         value: String(latest.mobilePaymentFailures),
         detail: `${formatSigned(changePct(baseFailures, latest.mobilePaymentFailures))} vs 7-day average`,
       },

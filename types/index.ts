@@ -482,12 +482,21 @@ export interface Campaign {
 export interface DailyMetric {
   day: string;
   sessions: number;
+  /** Accumulated from real order rows, along with revenue, COGS and refunds. */
   orders: number;
   revenuePaise: number;
   cogsPaise: number;
   adSpendPaise: number;
   refundsPaise: number;
+  /**
+   * Failed payment *attempts*, not failed orders. One shopper retrying a card
+   * five times is five attempts and at most one order row, which is why this
+   * number is far larger than the failure count in `getChannelBreakdown`.
+   * Unlike revenue and orders, it is an independent counter rather than
+   * something derived from the order table.
+   */
   mobilePaymentFailures: number;
+  /** Independent counter, like `mobilePaymentFailures`. */
   returns: number;
 }
 
