@@ -1,0 +1,51 @@
+# Render blueprint.
+#
+#   Render dashboard → New → Blueprint → pick this repo.
+#
+# Docker rather than a Node buildpack because the Dockerfile pins Node 24, which
+# `node:sqlite` requires and a buildpack may silently downgrade.
+#
+# numInstances is 1 and must stay 1: the event bus, the SSE stream and the queue
+# worker all live inside one process, so a second instance would fork the bus
+# and duplicate every queued fulfilment.
+#
+# No disk is attached on purpose. The seed is deterministic, so a restart comes
+# up with the identical dataset — a free-tier instance waking from sleep behaves
+# exactly like pressing "Reset demo". Attach one only if approvals and audit
+# rows should outlive a restart.
+services:
+  - type: web
+    name: commerce-os
+    runtime: docker
+    plan: free
+    numInstances: 1
+    healthCheckPath: /api/health
+    envVars:
+      # Set this in the dashboard, or nobody needs a password to approve money.
+      - key: DEMO_PASSWORD
+        sync: false
+      # Optional: hosted reasoning. Without it the deterministic engine ships
+      # and the UI says so — every figure and decision is identical either way.
+      - key: AI_PROVIDER
+        value: hosted
+      - key: AI_BASE_URL
+        sync: false
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        sync: false
+      # Optional: live Printful drafts. Unset, fulfilment is simulated.
+      - key: PRINTFUL_TOKEN
+        sync: false
+      - key: PRINTFUL_VARIANT_ID
+        sync: false
+      - key: PRINTFUL_RECIPIENT_NAME
+        sync: false
+      - key: PRINTFUL_RECIPIENT_ADDRESS1
+        sync: false
+      - key: PRINTFUL_RECIPIENT_CITY
+        sync: false
+      - key: PRINTFUL_RECIPIENT_COUNTRY
+        sync: false
+      - key: PRINTFUL_RECIPIENT_ZIP
+        sync: false

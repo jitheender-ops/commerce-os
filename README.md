@@ -345,6 +345,44 @@ the byte-identical dataset. Mount one at `/app/data` only if approvals and audit
 should survive a restart — otherwise a restart behaves exactly like pressing
 **Reset demo**.
 
+**Exactly one instance.** The event bus, the SSE stream and the queue worker all live
+inside the process. A second instance forks the bus and runs every queued fulfilment
+twice, so pin the instance count wherever you deploy — `numInstances: 1` on Render,
+`--max-instances=1` on Cloud Run.
+
+### Render
+
+[`render.yaml`](render.yaml) is a blueprint: **New → Blueprint → this repo**, then set
+`DEMO_PASSWORD` in the dashboard. Free instances sleep after ~15 minutes idle and take
+about a minute to wake, so a cold link makes a visitor wait.
+
+### Google Cloud Run
+
+```bash
+gcloud run deploy commerce-os --source . \
+  --max-instances=1 --min-instances=1 \
+  --set-env-vars DEMO_PASSWORD=...
+```
+
+`--max-instances=1` for the reason above; `--min-instances=1` keeps it warm, which is
+the difference between a link that responds instantly and one that cold-starts in front
+of a judge. Needs a billing account even inside the free allowance.
+
+### Protecting a public deployment
+
+This console has no user accounts and its buttons approve money and reset the business,
+which is fine on a laptop and not fine on a public URL. Set `DEMO_PASSWORD` and
+[`proxy.ts`](proxy.ts) puts the whole site behind one shared password over HTTP Basic —
+the browser draws the prompt, so there is no login page to build. `/api/health` stays
+open so a platform health check does not read a 401 as a dead instance and roll the
+deployment back.
+
+Unset, the gate is off entirely and local development is untouched.
+
+It is a demo gate, not an authentication system: one shared password, and the cookie it
+sets holds that password rather than a signed session token. It stops a passer-by
+approving a ₹2,00,000 purchase order. It is not built to withstand an attacker.
+
 ### Vercel and other serverless platforms
 
 Not supported as-is, and the gap is architectural rather than configuration:
