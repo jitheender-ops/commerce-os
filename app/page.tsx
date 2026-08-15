@@ -18,9 +18,10 @@ import { str } from "@/database/db";
 import { formatDelta, formatMoney, formatMoneyCompact } from "@/lib/money";
 import { ActivityFeed, AgentGraph } from "@/components/live";
 import { AskBar } from "@/components/ask";
-import { Badge, Empty, Meter, Panel, RiskBadge, SectionTitle, Stat } from "@/components/ui";
+import { Badge, Empty, Meter, Panel, RiskBadge, Stat } from "@/components/ui";
 import { RevenueChart } from "@/components/charts";
 import { BusinessTwin } from "@/components/twin";
+import { CommandHero } from "@/components/hero";
 
 export default function DashboardPage() {
   const summary = getBusinessSummary();
@@ -32,9 +33,18 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <SectionTitle hint={`Latest trading day · ${decomposition.latestDay}`}>
-        Command Center
-      </SectionTitle>
+      {/*
+        The hero. The grid warps toward the pointer and ripples where it is
+        clicked, which is the one place in this console where the interface
+        invites play — everywhere below it, motion would compete with data.
+      */}
+      <CommandHero
+        latestDay={decomposition.latestDay}
+        revenue={formatMoneyCompact(summary.revenuePaise)}
+        revenueDelta={summary.deltas.revenue}
+        pending={pending.length}
+        agents={AGENT_IDS.length}
+      />
 
       <AskBar />
 

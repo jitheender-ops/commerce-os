@@ -69,7 +69,7 @@ export function Panel({
           <div className="min-w-0">
             {source && <div className="caps mb-1">{SOURCE_LABEL[source]}</div>}
             {title && (
-              <h2 className="serif text-[length:var(--t-title)] leading-tight">{title}</h2>
+              <h2 className="text-[length:var(--t-title)] font-semibold tracking-[-0.01em]">{title}</h2>
             )}
             {subtitle && (
               <p
@@ -104,7 +104,7 @@ export function Stat({
 }) {
   const good = delta === undefined ? null : invertDelta ? delta < 0 : delta > 0;
   return (
-    <div className="border-t px-1 pb-1 pt-2.5" style={{ borderColor: "var(--line-strong)" }}>
+    <div className="panel lift px-4 py-3.5">
       <div className="caps">{label}</div>
       <div className="mt-1.5 flex items-baseline gap-2">
         <span className="num text-[length:var(--t-figure)] font-semibold leading-none tracking-[-0.02em]">
@@ -191,7 +191,7 @@ export function DecisionBadge({ decision }: { decision: string }) {
 export function Empty({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="py-10 text-center">
-      <p className="serif text-[15px]" style={{ color: "var(--ink-2)" }}>
+      <p className="text-[13px]" style={{ color: "var(--ink-2)" }}>
         {title}
       </p>
       {hint && (
@@ -260,7 +260,7 @@ export function SectionTitle({ children, hint }: { children: ReactNode; hint?: s
   return (
     <div className="mb-4">
       <div className="flex items-baseline justify-between gap-4 pb-2">
-        <h1 className="serif text-[length:var(--t-masthead)] leading-none">{children}</h1>
+        <h1 className="text-[length:var(--t-masthead)] font-semibold tracking-[-0.02em] leading-none">{children}</h1>
         {hint && <p className="caps shrink-0 text-right">{hint}</p>}
       </div>
       <div className="rule-strong" />

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { EngineBadge, ResetButton, Sidebar, ThemeToggle } from "@/components/shell";
 import { describeEngine } from "@/ai/gateway";
+import { Ambient } from "@/components/ambient";
 import { ensureSeeded } from "@/simulation/seed";
 
 export const metadata: Metadata = {
@@ -34,8 +35,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="surface-grid min-h-screen">
-        <div className="flex min-h-screen">
+      <body className="min-h-screen">
+        <Ambient />
+        {/* Above the ambient field: it is `position: fixed`, and a positioned
+            element paints over everything unpositioned in the same context,
+            which would put the gradient on top of the entire interface. */}
+        <div className="relative z-10 flex min-h-screen">
           <aside
             className="hidden w-[212px] shrink-0 border-r lg:block"
             style={{ background: "var(--panel)" }}

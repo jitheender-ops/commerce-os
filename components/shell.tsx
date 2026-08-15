@@ -53,7 +53,7 @@ export function Sidebar() {
       {/* A masthead, not a logo lockup: the name set in the serif, a rule
           beneath it, and the standing line underneath in the apparatus face. */}
       <Link href="/" className="block px-2 pt-1">
-        <span className="serif block text-[19px] leading-none">Commerce OS</span>
+        <span className="block text-[17px] font-semibold tracking-[-0.02em] leading-none">Commerce OS</span>
         <span className="mt-2 block rule-strong" />
         <span className="caps mt-1.5 block">Multi-agent operations</span>
       </Link>
@@ -138,10 +138,22 @@ function subscribeTheme(onChange: () => void): () => void {
 }
 
 const readTheme = (): "dark" | "light" =>
-  document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+
+/**
+ * The active edition, read from the DOM rather than held in state.
+ *
+ * Three components need it — the shell, the ambient ground and the hero — and
+ * each keeping its own copy meant three subscriptions that could disagree, and
+ * a setState inside an effect in every one of them. `useSyncExternalStore` is
+ * the API for exactly this: an external value with a subscription and an
+ * server-side default.
+ */
+export const useTheme = (): "dark" | "light" =>
+  useSyncExternalStore(subscribeTheme, readTheme, () => "light" as const);
 
 export function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribeTheme, readTheme, () => "dark" as const);
+  const theme = useTheme();
 
   return (
     <button

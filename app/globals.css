@@ -1,164 +1,246 @@
 @import "tailwindcss";
 
 /*
-  Commerce OS — the statistical release.
+  Commerce OS — liquid glass.
 
-  The reference is not a dashboard and not a newspaper. It is a published
-  release from an institution of record: a filing where every figure is
-  attributable, prose and data are visibly different kinds of claim, and the
-  apparatus around them says where each one came from.
+  Panels are translucent plates floating over a slow-moving field of colour.
+  They blur and saturate what is behind them, carry a specular highlight on the
+  top edge, and shift with the pointer — or with the device itself, where a
+  gyroscope exists. The intent is depth: a console you can feel the layers of.
 
-  That gives the type system its rule, and the rule is not decorative — it is
-  this project's honesty split made visible:
+  Two things survive from the previous surface because they are load-bearing:
 
-      serif      interpretation   what was concluded
-      mono       measurement      what was counted
-      caps       apparatus        labels, provenance, policy ids
+  1. The governance triad. Allow, ask and deny keep their own hues and remain
+     the only colours in the interface that carry a decision. Glass is
+     atmosphere; those three are meaning.
+  2. Tabular mono figures. Money and counts must line up and never reflow.
 
-  Colour is printed ink, not screen light. The governance triad — allow, ask,
-  deny — is the only saturated colour, and `--accent` is affordance alone
-  (focus, active nav, chart strokes) so it can never be read as meaning.
-
-  No webfont. This application's promise is that it runs with the wifi
-  unplugged, and a font fetch would put a network call into the build. `ui-serif`
-  resolves to a genuinely refined face on Apple platforms and degrades to
-  Iowan, Palatino and Georgia elsewhere.
+  Parallax is driven by two custom properties, --px and --py, each in the range
+  -1..1, written to the root by components/ambient.tsx from pointer movement or
+  device orientation. Everything that moves reads those, so there is one input
+  and no per-element listeners.
 */
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
 :root {
+  color-scheme: light;
+
   --t-micro: 10px;
   --t-label: 11px;
   --t-body: 12px;
-  --t-title: 14px;   /* serif panel titles carry a little more size */
-  --t-figure: 25px;
-  --t-masthead: 22px;
+  --t-title: 13px;
+  --t-figure: 26px;
+  --t-masthead: 20px;
+  --track-caps: 0.1em;
 
-  --track-caps: 0.13em;
+  --r-panel: 16px;
+  --r-chip: 10px;
 
-  /* Print does not have rounded corners. Two points, so it reads as a plate
-     rather than a hard-edged div, and no more. */
-  --r-panel: 2px;
-  --r-chip: 2px;
+  /* Parallax input, overwritten at runtime. Zero means "perfectly level". */
+  --px: 0;
+  --py: 0;
 
-  /* ── Paper edition ───────────────────────────────────────────────────── */
-  --bg: #f2f3f4;
-  --panel: #ffffff;
-  --panel-2: #f8f9fa;
-  --line: #dfe1e5;        /* hairline: table rules, panel borders */
-  --line-strong: #15181c; /* the heavy rule under a masthead or a total */
-  --ink: #15181c;
-  --ink-2: #4a4f57;
-  --ink-3: #7b8189;
-  --accent: #1f3d6b;
-  --good: #2e6b4f;
-  --warn: #8a5a12;
-  --bad: #9e2b24;
-  --crit: #6d1f4a;
-  --grid: rgba(21, 24, 28, 0.035);
-  --plate-edge: rgba(255, 255, 255, 0);
-  --shadow-panel: none;
+  /* ── Daylight ────────────────────────────────────────────────────────── */
+  --bg: #eef1f7;
+  --bg-2: #e3e8f2;
+  --panel: rgba(255, 255, 255, 0.58);
+  --panel-2: rgba(255, 255, 255, 0.38);
+  --panel-solid: rgba(255, 255, 255, 0.86);
+  --line: rgba(17, 24, 39, 0.09);
+  --line-strong: rgba(17, 24, 39, 0.22);
+  --border-glass: rgba(255, 255, 255, 0.7);
+  --inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.95),
+                     inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  --shadow-glass: 0 1px 1px rgba(17, 24, 39, 0.03),
+                  0 18px 40px -16px rgba(30, 41, 59, 0.22);
+
+  --ink: #0f172a;
+  --ink-2: #56617a;
+  --ink-3: #8b95ab;
+
+  --accent: #2563eb;
+  --good: #0f9d63;
+  --warn: #c2790a;
+  --bad: #dc3b40;
+  --crit: #a2258c;
+
+  --ambient-a: rgba(37, 99, 235, 0.20);
+  --ambient-b: rgba(139, 92, 246, 0.17);
+  --ambient-c: rgba(6, 182, 212, 0.13);
+
+  --grid: rgba(17, 24, 39, 0.028);
 }
 
-/* ── Night edition ─────────────────────────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0e1013;
-    --panel: #14171b;
-    --panel-2: #191d22;
-    --line: #262b32;
-    --line-strong: #ecedef;
-    --ink: #ecedef;
-    --ink-2: #a3a9b2;
-    --ink-3: #71787f;
-    --accent: #7fa6e0;
-    --good: #4fa97c;
-    --warn: #c9922f;
-    --bad: #d65a52;
-    --crit: #cf6ba6;
-    --grid: rgba(236, 237, 239, 0.03);
-    --plate-edge: rgba(255, 255, 255, 0.04);
-    --shadow-panel: none;
-  }
-}
-
-html[data-theme="light"] {
-  --bg: #f2f3f4; --panel: #ffffff; --panel-2: #f8f9fa; --line: #dfe1e5;
-  --line-strong: #15181c; --ink: #15181c; --ink-2: #4a4f57; --ink-3: #7b8189;
-  --accent: #1f3d6b; --good: #2e6b4f; --warn: #8a5a12; --bad: #9e2b24;
-  --crit: #6d1f4a; --grid: rgba(21, 24, 28, 0.035);
-  --plate-edge: rgba(255, 255, 255, 0); --shadow-panel: none;
-}
-
+/* ── Night ─────────────────────────────────────────────────────────────── */
 html[data-theme="dark"] {
-  --bg: #0e1013; --panel: #14171b; --panel-2: #191d22; --line: #262b32;
-  --line-strong: #ecedef; --ink: #ecedef; --ink-2: #a3a9b2; --ink-3: #71787f;
-  --accent: #7fa6e0; --good: #4fa97c; --warn: #c9922f; --bad: #d65a52;
-  --crit: #cf6ba6; --grid: rgba(236, 237, 239, 0.03);
-  --plate-edge: rgba(255, 255, 255, 0.04); --shadow-panel: none;
+  color-scheme: dark;
+
+  --bg: #060a12;
+  --bg-2: #0b1220;
+  --panel: rgba(21, 31, 50, 0.55);
+  --panel-2: rgba(21, 31, 50, 0.34);
+  --panel-solid: rgba(12, 19, 32, 0.88);
+  --line: rgba(148, 178, 230, 0.13);
+  --line-strong: rgba(148, 178, 230, 0.3);
+  --border-glass: rgba(148, 178, 230, 0.18);
+  --inner-highlight: inset 0 1px 0 rgba(180, 205, 255, 0.14),
+                     inset 0 0 0 1px rgba(148, 178, 230, 0.06);
+  --shadow-glass: 0 1px 1px rgba(0, 0, 0, 0.24),
+                  0 24px 56px -18px rgba(0, 0, 0, 0.7);
+
+  --ink: #f5f8ff;
+  --ink-2: #9aa6bf;
+  --ink-3: #667389;
+
+  --accent: #60a5fa;
+  --good: #34d399;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --crit: #e879c7;
+
+  --ambient-a: rgba(96, 165, 250, 0.24);
+  --ambient-b: rgba(167, 139, 250, 0.24);
+  --ambient-c: rgba(34, 211, 238, 0.14);
+
+  --grid: rgba(148, 178, 230, 0.03);
 }
+
+html[data-theme="light"] { color-scheme: light; }
 
 * { border-color: var(--line); }
 
 body {
-  background: var(--bg);
+  min-height: 100vh;
+  background:
+    radial-gradient(120% 90% at 12% -10%, var(--bg-2) 0%, transparent 55%),
+    radial-gradient(110% 80% at 100% 0%, var(--bg-2) 0%, transparent 45%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-sans);
   font-feature-settings: "tnum" 1, "cv05" 1;
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: color-mix(in oklab, var(--accent) 24%, transparent); }
+::selection { background: color-mix(in oklab, var(--accent) 26%, transparent); }
 
-/* Serif is reserved for what was concluded, never for what was counted. */
-.serif {
-  font-family: var(--font-serif);
-  font-weight: 500;
-  letter-spacing: -0.008em;
+/* ── The ambient field ─────────────────────────────────────────────────── */
+
+.ambient-field {
+  position: fixed;
+  inset: -10%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  /* The whole field leans with the device, which is what sells the depth. */
+  transform: translate3d(calc(var(--px) * 18px), calc(var(--py) * 18px), 0);
+  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* The heavy rule. One per region, under a masthead or above a total — it is
-   the loudest mark in the interface and it stops meaning anything if repeated. */
-.rule-strong { border-top: 2px solid var(--line-strong); }
+.ambient-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+}
+
+/* Each blob moves a different amount, so the layers separate under motion. */
+.ambient-blob[data-depth="1"] { transform: translate3d(calc(var(--px) * -34px), calc(var(--py) * -26px), 0); }
+.ambient-blob[data-depth="2"] { transform: translate3d(calc(var(--px) *  26px), calc(var(--py) *  30px), 0); }
+.ambient-blob[data-depth="3"] { transform: translate3d(calc(var(--px) *  44px), calc(var(--py) * -18px), 0); }
+
+@keyframes drift {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 3% -4%; }
+}
+.drift { animation: drift 22s ease-in-out infinite; }
 
 .surface-grid {
   background-image:
     linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-size: 34px 34px;
 }
 
+/* ── Glass ─────────────────────────────────────────────────────────────── */
+
 .panel {
+  position: relative;
   background: var(--panel);
-  border: 1px solid var(--line);
+  backdrop-filter: blur(26px) saturate(155%);
+  -webkit-backdrop-filter: blur(26px) saturate(155%);
+  border: 1px solid var(--border-glass);
   border-radius: var(--r-panel);
-  box-shadow: var(--shadow-panel), inset 0 1px 0 0 var(--plate-edge);
+  box-shadow: var(--shadow-glass), var(--inner-highlight);
+}
+
+/*
+  The specular sweep. A single soft highlight that slides across the plate as
+  the pointer moves, so glass reads as a surface catching light rather than a
+  translucent rectangle.
+*/
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 90% at calc(50% + var(--px) * 40%) calc(0% + var(--py) * 22%),
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  transition: background 240ms ease-out;
 }
 
 .panel-flush { background: var(--panel-2); }
 
+.glass-thin {
+  background: var(--panel-2);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--r-chip);
+}
+
+/* Panels that respond to being pointed at. Not applied to tables and feeds —
+   a row that lifts while you are reading it is noise, not depth. */
+.lift {
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 380ms ease,
+              border-color 380ms ease;
+}
+.lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glass), var(--inner-highlight),
+              0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+/* Where backdrop-filter is unavailable, fall back to an opaque plate rather
+   than unreadable text over a moving gradient. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel, .glass-thin { background: var(--panel-solid); }
+}
+
+/* ── Meaning ───────────────────────────────────────────────────────────── */
+
 /*
-  The decision spine.
-
-  A 3px left edge carrying the governance state of what sits inside: green
-  executed, amber waiting on a person, red refused. It is the one place this
-  interface spends colour on structure, and it earns it — a column of amber
-  edges tells an operator what needs them before a word is read.
-
-  Absent means nothing was adjudicated here, which is most of the interface.
+  The decision spine: a 3px left edge carrying governance state — green
+  executed, amber waiting on a person, red refused. Glass is atmosphere; this
+  is the one structural use of colour that means something.
 */
-.spine { position: relative; }
 .spine::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
+  border-radius: var(--r-panel) 0 0 var(--r-panel);
   background: var(--spine-color, transparent);
+  z-index: 1;
 }
 .spine-allow { --spine-color: var(--good); }
 .spine-ask   { --spine-color: var(--warn); }
@@ -167,7 +249,6 @@ body {
 
 .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-/* Apparatus: labels, provenance, policy ids. Never a sentence. */
 .caps {
   font-size: var(--t-micro);
   text-transform: uppercase;
@@ -177,8 +258,10 @@ body {
 }
 
 .hairline { border-top: 1px solid var(--line); }
+.rule-strong { border-top: 1.5px solid var(--line-strong); }
 
-/* Live indicator on active agents. */
+/* ── Motion ────────────────────────────────────────────────────────────── */
+
 @keyframes pulse-ring {
   0% { box-shadow: 0 0 0 0 currentColor; opacity: 0.85; }
   70% { box-shadow: 0 0 0 5px transparent; opacity: 1; }
@@ -192,20 +275,27 @@ body {
 }
 .enter { animation: slide-in 220ms ease-out both; }
 
-@keyframes dash {
-  to { stroke-dashoffset: -18; }
-}
+@keyframes dash { to { stroke-dashoffset: -18; } }
 .flowing { stroke-dasharray: 4 5; animation: dash 700ms linear infinite; }
 
+/*
+  Reduced motion switches every moving part off, including the parallax: the
+  properties are zeroed so nothing reads them, and the ambient field holds
+  still. The design still works — it is simply no longer alive.
+*/
 @media (prefers-reduced-motion: reduce) {
-  .pulse, .enter, .flowing { animation: none; }
+  :root { --px: 0 !important; --py: 0 !important; }
+  .pulse, .enter, .flowing, .drift { animation: none; }
+  .ambient-field, .ambient-blob, .lift, .panel::after { transition: none; }
+  .lift:hover { transform: none; }
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb {
-  background: var(--line);
+  background: var(--line-strong);
   border-radius: 6px;
-  border: 3px solid var(--bg);
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
 :focus-visible {
