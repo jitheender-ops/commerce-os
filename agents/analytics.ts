@@ -170,7 +170,10 @@ function deriveConclusion(
     .filter((d) => Math.abs(d.changePct) < Math.abs(primary?.changePct ?? 0) / 2)
     .map((d) => `${d.name} moved only ${formatDelta(d.changePct)} and cannot account for the change`);
 
-  const failureAnomaly = anomalies.find((a) => a.metric === "Mobile payment failures");
+  // Matched by prefix: the series was renamed to "…failure attempts" to say what
+  // it counts, and an exact-string lookup silently stopped finding it — which
+  // cost the conclusion its confidence bump without failing anything.
+  const failureAnomaly = anomalies.find((a) => a.metric.startsWith("Mobile payment failure"));
 
   let rootCause: string;
   let confidence: number;

@@ -76,6 +76,7 @@ export function ApprovalQueue({ initial }: { initial: (Approval & { policy?: { i
       {approvals.map((approval) => (
         <Panel
           key={approval.id}
+          spine="ask"
           title={approval.title}
           subtitle={`${AGENTS[approval.agentId].name} · ${approval.entityType} ${approval.entityId}`}
           actions={<RiskBadge risk={approval.risk} />}
@@ -140,9 +141,7 @@ const Outcome = ({ outcome }: { outcome: { text: string; ok: boolean } }) => (
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>
-    <dt className="text-[10px] uppercase tracking-[0.07em]" style={{ color: "var(--ink-3)" }}>
-      {label}
-    </dt>
+    <dt className="caps">{label}</dt>
     <dd className="mt-0.5 text-[12px]" style={{ color: "var(--ink-2)" }}>
       {children}
     </dd>

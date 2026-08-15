@@ -294,7 +294,15 @@ export function seedDemo(): SeedReport {
         });
 
         // On the fault day, mobile checkout fails far more often.
-        const failureRate = isLatest && channel === "mobile" ? 0.19 : 0.02;
+        //
+        // 0.45 rather than a milder number because the agent reads a 7-day
+        // window: one bad day averaged with six normal ones has to still clear
+        // the outlier test, and at 0.19 it landed within noise of the 2.5×
+        // threshold — some days the flagship investigation found the fault and
+        // some days it did not. A gateway regression that fails nearly half of
+        // mobile payments is also what a real outage looks like, and it matches
+        // the ~200 failed attempts the same day already records.
+        const failureRate = isLatest && channel === "mobile" ? 0.45 : 0.02;
         const failed = rng.bool(failureRate);
         const cancelled = !failed && rng.bool(0.03);
         const status = failed ? "CANCELLED" : cancelled ? "CANCELLED" : rng.weighted([

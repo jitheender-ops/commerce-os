@@ -69,6 +69,7 @@ export default function FulfillmentPage() {
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <Panel
+          spine={dead.length > 0 ? "deny" : undefined}
           title="Dead letter queue"
           subtitle="Retries exhausted — these need a decision, not another attempt"
           bodyClassName="p-0"

@@ -10,6 +10,21 @@ import { cn } from "@/lib/cn";
 import { formatDelta } from "@/lib/money";
 import type { RiskLevel } from "@/types";
 
+/**
+ * `spine` paints the 2px left edge that carries a governance state:
+ * `allow` executed, `ask` waiting on a person, `deny` refused, `live` in
+ * flight. Leave it off for panels that adjudicate nothing — which is most of
+ * them, and what keeps the ones that do carry it legible across a page.
+ */
+export type Spine = "allow" | "ask" | "deny" | "live";
+
+const SPINE_CLASS: Record<Spine, string> = {
+  allow: "spine spine-allow",
+  ask: "spine spine-ask",
+  deny: "spine spine-deny",
+  live: "spine spine-live",
+};
+
 export function Panel({
   title,
   subtitle,
@@ -17,6 +32,7 @@ export function Panel({
   children,
   className,
   bodyClassName,
+  spine,
 }: {
   title?: ReactNode;
   subtitle?: ReactNode;
@@ -24,15 +40,23 @@ export function Panel({
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
+  spine?: Spine;
 }) {
   return (
-    <section className={cn("panel overflow-hidden", className)}>
+    <section className={cn("panel overflow-hidden", spine && SPINE_CLASS[spine], className)}>
       {(title || actions) && (
-        <header className="flex items-start justify-between gap-4 px-4 py-3 border-b">
+        <header className="flex items-start justify-between gap-4 border-b px-4 py-2.5">
           <div className="min-w-0">
-            {title && <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>}
+            {title && (
+              <h2 className="text-[length:var(--t-title)] font-semibold tracking-[-0.006em]">
+                {title}
+              </h2>
+            )}
             {subtitle && (
-              <p className="mt-0.5 text-[11px]" style={{ color: "var(--ink-3)" }}>
+              <p
+                className="mt-0.5 text-[length:var(--t-label)] leading-snug"
+                style={{ color: "var(--ink-3)" }}
+              >
                 {subtitle}
               </p>
             )}
@@ -61,12 +85,12 @@ export function Stat({
 }) {
   const good = delta === undefined ? null : invertDelta ? delta < 0 : delta > 0;
   return (
-    <div className="panel px-4 py-3">
-      <div className="text-[10px] uppercase tracking-[0.09em]" style={{ color: "var(--ink-3)" }}>
-        {label}
-      </div>
-      <div className="mt-1.5 flex items-baseline gap-2">
-        <span className="num text-[22px] font-semibold leading-none">{value}</span>
+    <div className="panel px-4 py-3.5">
+      <div className="caps">{label}</div>
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className="num text-[length:var(--t-figure)] font-semibold leading-none tracking-[-0.02em]">
+          {value}
+        </span>
         {delta !== undefined && Number.isFinite(delta) && (
           <span
             className="num text-[11px] font-medium"

@@ -15,6 +15,7 @@ import { getDb } from "@/database/db";
 import { seedDemo } from "@/simulation/seed";
 import { getFulfillmentForOrder, listFulfillments, listOrders } from "@/database/queries";
 import { newCorrelationId } from "@/lib/ids";
+import { POLICY_LIMITS } from "@/policies/rules";
 import type { AgentId, Order, ToolContext } from "@/types";
 
 const ctx = (agentId: AgentId): ToolContext => ({
@@ -23,9 +24,31 @@ const ctx = (agentId: AgentId): ToolContext => ({
   correlationId: newCorrelationId(),
 });
 
-/** A paid order, which is the only kind that may be fulfilled. */
+/**
+ * A paid order that governance will let through without a human.
+ *
+ * The cost filter is not incidental: the seed is generated relative to today, so
+ * "the first paid order" is a different order every day, and on a day when it
+ * happens to cost more than ₹50,000 it parks under FUL-002 and every test that
+ * expects execution fails for a reason that has nothing to do with what it is
+ * testing. Tests that want the approval path ask for it explicitly.
+ */
 const paidOrder = (): Order =>
-  listOrders(200).find((o) => o.paymentStatus === "SUCCESS")!;
+  listOrders(200).find(
+    (o) =>
+      o.paymentStatus === "SUCCESS" &&
+      o.costPaise <= POLICY_LIMITS.financial.maxAutoPurchaseOrderPaise,
+  )!;
+
+/** Paid orders that auto-execute, for tests that need more than one. */
+const autoFulfillableOrders = (count: number): Order[] =>
+  listOrders(200)
+    .filter(
+      (o) =>
+        o.paymentStatus === "SUCCESS" &&
+        o.costPaise <= POLICY_LIMITS.financial.maxAutoPurchaseOrderPaise,
+    )
+    .slice(0, count);
 
 beforeAll(() => {
   seedDemo();
@@ -34,6 +57,11 @@ beforeAll(() => {
 beforeEach(() => {
   getDb().run(`DELETE FROM job_queue`);
   getDb().run(`DELETE FROM fulfillments`);
+  // Spend accumulates per agent per day and is charged on every execution, so
+  // without this the tests are coupled: whichever ones run first eat the daily
+  // authority and the rest get parked under BUD-001 for a reason that has
+  // nothing to do with what they are asserting.
+  getDb().run(`UPDATE agents SET budget_used_paise = 0`);
   setSupplier(null); // back to the simulated default
 });
 
@@ -103,19 +131,16 @@ describe("submission", () => {
     // Two orders handed over in the same millisecond were given the same
     // reference, because the id was built from its timestamp component alone.
     // On screen that reads as one order counted twice.
-    const orders = listOrders(200).filter((o) => o.paymentStatus === "SUCCESS").slice(0, 5);
+    const orders = autoFulfillableOrders(4);
     for (const order of orders) {
       await callTool("fulfill_order", { orderId: order.id, reason: "batch" }, ctx("fulfillment"));
     }
     await runDueJobs(20);
 
-    // Not every order gets a row — one above the auto-approval limit parks
-    // instead, and a parked call never executes. What matters is that the ones
-    // which did reach the supplier came back distinguishable from each other.
     const references = listFulfillments()
       .map((f) => f.externalId)
       .filter(Boolean);
-    expect(references.length).toBeGreaterThan(1);
+    expect(references.length).toBe(orders.length);
     expect(new Set(references).size).toBe(references.length);
   });
 
