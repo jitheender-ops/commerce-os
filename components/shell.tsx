@@ -50,25 +50,18 @@ export function Sidebar() {
   const pathname = usePathname();
   return (
     <nav aria-label="Primary" className="flex h-full flex-col gap-5 overflow-y-auto px-3 py-4">
-      <Link href="/" className="flex items-center gap-2 px-2">
-        <span
-          className="grid h-7 w-7 place-items-center rounded-md text-[11px] font-bold"
-          style={{ background: "var(--accent)", color: "#fff" }}
-        >
-          C
-        </span>
-        <span className="text-[13px] font-semibold leading-tight">
-          Commerce OS
-          <span className="block text-[10px] font-normal" style={{ color: "var(--ink-3)" }}>
-            multi-agent operations
-          </span>
-        </span>
+      {/* A masthead, not a logo lockup: the name set in the serif, a rule
+          beneath it, and the standing line underneath in the apparatus face. */}
+      <Link href="/" className="block px-2 pt-1">
+        <span className="serif block text-[19px] leading-none">Commerce OS</span>
+        <span className="mt-2 block rule-strong" />
+        <span className="caps mt-1.5 block">Multi-agent operations</span>
       </Link>
 
       {NAV.map((section) => (
         <div key={section.group}>
           <div
-            className="px-2 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.12em]"
+            className="caps px-2 pb-1.5 pt-1"
             style={{ color: "var(--ink-3)" }}
           >
             {section.group}

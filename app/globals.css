@@ -1,99 +1,106 @@
 @import "tailwindcss";
 
 /*
-  Commerce OS surface.
+  Commerce OS — the statistical release.
 
-  The reference is not a trading terminal — this product's subject is not price
-  discovery, it is adjudication: allow, ask, deny, with a paper trail. So the
-  governance triad *is* the palette. Those three hues are the only saturated
-  colour in the interface, and they mean the same thing wherever they appear.
-  Everything else is graphite and steel.
+  The reference is not a dashboard and not a newspaper. It is a published
+  release from an institution of record: a filing where every figure is
+  attributable, prose and data are visibly different kinds of claim, and the
+  apparatus around them says where each one came from.
 
-  `--accent` is affordance only: focus rings, active navigation, chart strokes.
-  It never encodes a business meaning, which is what keeps the triad legible.
+  That gives the type system its rule, and the rule is not decorative — it is
+  this project's honesty split made visible:
 
-  Typography is the system stack on purpose. A webfont would put a network fetch
-  into the build, and this application's promise is that it runs with the wifi
-  unplugged. The personality is in the scale and the treatment instead.
+      serif      interpretation   what was concluded
+      mono       measurement      what was counted
+      caps       apparatus        labels, provenance, policy ids
+
+  Colour is printed ink, not screen light. The governance triad — allow, ask,
+  deny — is the only saturated colour, and `--accent` is affordance alone
+  (focus, active nav, chart strokes) so it can never be read as meaning.
+
+  No webfont. This application's promise is that it runs with the wifi
+  unplugged, and a font fetch would put a network call into the build. `ui-serif`
+  resolves to a genuinely refined face on Apple platforms and degrades to
+  Iowan, Palatino and Georgia elsewhere.
 */
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: ui-serif, "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
 :root {
-  /* Type scale. Small, deliberate steps — a console reads in one size band. */
-  --t-micro: 10px;   /* tracked caps: field labels, eyebrows */
-  --t-label: 11px;   /* secondary text, hints */
-  --t-body: 12px;    /* table cells, prose */
-  --t-title: 13px;   /* panel titles */
-  --t-figure: 26px;  /* the number a stat exists for */
+  --t-micro: 10px;
+  --t-label: 11px;
+  --t-body: 12px;
+  --t-title: 14px;   /* serif panel titles carry a little more size */
+  --t-figure: 25px;
+  --t-masthead: 22px;
 
-  --track-caps: 0.11em;
+  --track-caps: 0.13em;
 
-  /* Instruments are not rounded. */
-  --r-panel: 6px;
-  --r-chip: 4px;
+  /* Print does not have rounded corners. Two points, so it reads as a plate
+     rather than a hard-edged div, and no more. */
+  --r-panel: 2px;
+  --r-chip: 2px;
 
-  /* Light. */
-  --bg: #f4f5f7;
+  /* ── Paper edition ───────────────────────────────────────────────────── */
+  --bg: #f2f3f4;
   --panel: #ffffff;
-  --panel-2: #fafafb;
-  --line: #e1e3e8;
-  --line-strong: #c8cbd3;
-  --ink: #14161a;
-  --ink-2: #51555e;
-  --ink-3: #838791;
-  --accent: #2f5fae;
-  --good: #12805a;
-  --warn: #a76a10;
-  --bad: #c22f34;
-  --crit: #8b1a5c;
-  --grid: rgba(20, 22, 26, 0.04);
+  --panel-2: #f8f9fa;
+  --line: #dfe1e5;        /* hairline: table rules, panel borders */
+  --line-strong: #15181c; /* the heavy rule under a masthead or a total */
+  --ink: #15181c;
+  --ink-2: #4a4f57;
+  --ink-3: #7b8189;
+  --accent: #1f3d6b;
+  --good: #2e6b4f;
+  --warn: #8a5a12;
+  --bad: #9e2b24;
+  --crit: #6d1f4a;
+  --grid: rgba(21, 24, 28, 0.035);
   --plate-edge: rgba(255, 255, 255, 0);
-  --shadow-panel: 0 1px 2px rgba(20, 22, 26, 0.04);
+  --shadow-panel: none;
 }
 
+/* ── Night edition ─────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #08090c;
-    --panel: #101319;
-    --panel-2: #14171e;
-    --line: #212630;
-    --line-strong: #2f3541;
-    --ink: #e8eaf0;
-    --ink-2: #9ba2b0;
-    --ink-3: #697080;
-    --accent: #6f9be8;
-    --good: #3fb984;
-    --warn: #e0a33c;
-    --bad: #e5484d;
-    --crit: #e06fbd;
-    --grid: rgba(255, 255, 255, 0.028);
-    /* A 1px top highlight is what makes a rectangle read as a machined plate
-       rather than a flat div. One line, no shadow stack. */
-    --plate-edge: rgba(255, 255, 255, 0.05);
+    --bg: #0e1013;
+    --panel: #14171b;
+    --panel-2: #191d22;
+    --line: #262b32;
+    --line-strong: #ecedef;
+    --ink: #ecedef;
+    --ink-2: #a3a9b2;
+    --ink-3: #71787f;
+    --accent: #7fa6e0;
+    --good: #4fa97c;
+    --warn: #c9922f;
+    --bad: #d65a52;
+    --crit: #cf6ba6;
+    --grid: rgba(236, 237, 239, 0.03);
+    --plate-edge: rgba(255, 255, 255, 0.04);
     --shadow-panel: none;
   }
 }
 
 html[data-theme="light"] {
-  --bg: #f4f5f7; --panel: #ffffff; --panel-2: #fafafb; --line: #e1e3e8;
-  --line-strong: #c8cbd3; --ink: #14161a; --ink-2: #51555e; --ink-3: #838791;
-  --accent: #2f5fae; --good: #12805a; --warn: #a76a10; --bad: #c22f34;
-  --crit: #8b1a5c; --grid: rgba(20, 22, 26, 0.04);
-  --plate-edge: rgba(255, 255, 255, 0);
-  --shadow-panel: 0 1px 2px rgba(20, 22, 26, 0.04);
+  --bg: #f2f3f4; --panel: #ffffff; --panel-2: #f8f9fa; --line: #dfe1e5;
+  --line-strong: #15181c; --ink: #15181c; --ink-2: #4a4f57; --ink-3: #7b8189;
+  --accent: #1f3d6b; --good: #2e6b4f; --warn: #8a5a12; --bad: #9e2b24;
+  --crit: #6d1f4a; --grid: rgba(21, 24, 28, 0.035);
+  --plate-edge: rgba(255, 255, 255, 0); --shadow-panel: none;
 }
 
 html[data-theme="dark"] {
-  --bg: #08090c; --panel: #101319; --panel-2: #14171e; --line: #212630;
-  --line-strong: #2f3541; --ink: #e8eaf0; --ink-2: #9ba2b0; --ink-3: #697080;
-  --accent: #6f9be8; --good: #3fb984; --warn: #e0a33c; --bad: #e5484d;
-  --crit: #e06fbd; --grid: rgba(255, 255, 255, 0.028);
-  --plate-edge: rgba(255, 255, 255, 0.05);
-  --shadow-panel: none;
+  --bg: #0e1013; --panel: #14171b; --panel-2: #191d22; --line: #262b32;
+  --line-strong: #ecedef; --ink: #ecedef; --ink-2: #a3a9b2; --ink-3: #71787f;
+  --accent: #7fa6e0; --good: #4fa97c; --warn: #c9922f; --bad: #d65a52;
+  --crit: #cf6ba6; --grid: rgba(236, 237, 239, 0.03);
+  --plate-edge: rgba(255, 255, 255, 0.04); --shadow-panel: none;
 }
 
 * { border-color: var(--line); }
@@ -106,9 +113,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: color-mix(in oklab, var(--accent) 28%, transparent); }
+::selection { background: color-mix(in oklab, var(--accent) 24%, transparent); }
 
-/* Faint graph paper behind the shell — reads as instrumentation, not texture. */
+/* Serif is reserved for what was concluded, never for what was counted. */
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.008em;
+}
+
+/* The heavy rule. One per region, under a masthead or above a total — it is
+   the loudest mark in the interface and it stops meaning anything if repeated. */
+.rule-strong { border-top: 2px solid var(--line-strong); }
+
 .surface-grid {
   background-image:
     linear-gradient(var(--grid) 1px, transparent 1px),
@@ -128,7 +145,7 @@ body {
 /*
   The decision spine.
 
-  A 2px left edge carrying the governance state of whatever sits inside: green
+  A 3px left edge carrying the governance state of what sits inside: green
   executed, amber waiting on a person, red refused. It is the one place this
   interface spends colour on structure, and it earns it — a column of amber
   edges tells an operator what needs them before a word is read.
@@ -140,8 +157,7 @@ body {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
-  width: 2px;
-  border-radius: var(--r-panel) 0 0 var(--r-panel);
+  width: 3px;
   background: var(--spine-color, transparent);
 }
 .spine-allow { --spine-color: var(--good); }
@@ -151,12 +167,13 @@ body {
 
 .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-/* Tracked micro-caps: the label vocabulary of an instrument. */
+/* Apparatus: labels, provenance, policy ids. Never a sentence. */
 .caps {
   font-size: var(--t-micro);
   text-transform: uppercase;
   letter-spacing: var(--track-caps);
   color: var(--ink-3);
+  font-weight: 600;
 }
 
 .hairline { border-top: 1px solid var(--line); }
@@ -186,7 +203,7 @@ body {
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb {
-  background: var(--line-strong);
+  background: var(--line);
   border-radius: 6px;
   border: 3px solid var(--bg);
 }

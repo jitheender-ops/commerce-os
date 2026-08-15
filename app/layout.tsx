@@ -18,12 +18,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const engine = describeEngine();
 
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
-        {/* Applies the stored theme before first paint so there is no flash. */}
+        {/*
+          Applies the stored theme before first paint so there is no flash.
+
+          The paper edition is the default rather than the system preference:
+          this interface is set as a printed release, and that is the form it
+          was designed in. The night edition is a choice a reader makes, and the
+          toggle remembers it.
+        */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("commerce-os-theme");document.documentElement.dataset.theme=(t==="light"||t==="dark")?t:(window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark")}catch(e){}`,
+            __html: `try{var t=localStorage.getItem("commerce-os-theme");document.documentElement.dataset.theme=(t==="light"||t==="dark")?t:"light"}catch(e){}`,
           }}
         />
       </head>

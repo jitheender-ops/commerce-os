@@ -56,6 +56,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="space-y-4 xl:col-span-2">
           <Panel
+            source="measured"
             title="Revenue decomposition"
             subtitle="revenue = sessions × conversion × average order value"
           >
