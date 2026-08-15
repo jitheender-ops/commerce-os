@@ -40,7 +40,7 @@ export function CommandHero({
   const up = revenueDelta >= 0;
 
   return (
-    <KineticGrid {...grid} className="rounded-[var(--r-panel)] border" >
+    <KineticGrid {...grid} className="shimmer-edge relative rounded-[var(--r-panel)] border">
       <div className="flex min-h-[210px] flex-col justify-between gap-6 p-6 md:min-h-[240px] md:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -71,8 +71,8 @@ export function CommandHero({
             <p className="caps" style={{ color: "rgba(255,255,255,0.5)" }}>
               Revenue, latest day
             </p>
-            <p className="num mt-1 flex items-baseline gap-2 text-[30px] font-semibold leading-none tracking-[-0.02em] md:text-[38px]" style={{ color: "#fff" }}>
-              {revenue}
+            <p className="num mt-1 flex items-baseline gap-2 text-[30px] font-semibold leading-none tracking-[-0.02em] md:text-[38px]">
+              <span className="shimmer-text-invert">{revenue}</span>
               <span
                 className="text-[13px] font-medium"
                 style={{ color: up ? "#4ade80" : "#fb7185" }}

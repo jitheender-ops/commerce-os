@@ -40,7 +40,10 @@ const SPINE_CLASS: Record<Spine, string> = {
   allow: "spine spine-allow",
   ask: "spine spine-ask",
   deny: "spine spine-deny",
-  live: "spine spine-live",
+  // Live gets the travelling border rather than a spine, and not only to avoid
+  // two rules fighting over one pseudo-element: a settled decision is a mark you
+  // read once, while something still running should be the thing that moves.
+  live: "shimmer-edge",
 };
 
 export function Panel({

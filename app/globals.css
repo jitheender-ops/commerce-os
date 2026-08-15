@@ -245,7 +245,7 @@ body {
 .spine-allow { --spine-color: var(--good); }
 .spine-ask   { --spine-color: var(--warn); }
 .spine-deny  { --spine-color: var(--bad); }
-.spine-live  { --spine-color: var(--accent); }
+.spine-live  { --spine-color: var(--accent); } /* reserved; live uses .shimmer-edge */
 
 .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
@@ -259,6 +259,118 @@ body {
 
 .hairline { border-top: 1px solid var(--line); }
 .rule-strong { border-top: 1.5px solid var(--line-strong); }
+
+/* ── Shimmer ───────────────────────────────────────────────────────────── */
+
+/*
+  Three shimmers, each with a job. Used anywhere else they become the interface
+  equivalent of glitter — and the moment everything shimmers, nothing reads as
+  live.
+
+  .shimmer-text   the headline figure, so the number the page exists for has
+                  the light moving through it
+  .shimmer-edge   a highlight travelling the border of a surface that is
+                  currently doing something
+  .shimmer        a sweep across a plate: work in progress, or a value that has
+                  not settled yet
+*/
+
+@keyframes shimmer-sweep {
+  from { transform: translateX(-120%) skewX(-12deg); }
+  to   { transform: translateX(220%)  skewX(-12deg); }
+}
+
+.shimmer { position: relative; overflow: hidden; isolation: isolate; }
+.shimmer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in oklab, var(--accent) 14%, transparent) 45%,
+    rgba(255, 255, 255, 0.22) 55%,
+    transparent 100%
+  );
+  animation: shimmer-sweep 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes shimmer-slide {
+  to { background-position: 200% center; }
+}
+
+/* The gradient is 200% wide and slides, so the light travels through the
+   glyphs rather than the text fading in and out. */
+.shimmer-text {
+  background: linear-gradient(
+    100deg,
+    var(--ink) 0%,
+    var(--ink) 35%,
+    color-mix(in oklab, var(--accent) 65%, var(--ink)) 50%,
+    var(--ink) 65%,
+    var(--ink) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: shimmer-slide 4.5s linear infinite;
+}
+
+/* On the hero the type sits on the dark canvas, so the ramp is white-based. */
+.shimmer-text-invert {
+  background: linear-gradient(
+    100deg,
+    #ffffff 0%,
+    #ffffff 35%,
+    #9ec5ff 50%,
+    #ffffff 65%,
+    #ffffff 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: shimmer-slide 5s linear infinite;
+}
+
+@keyframes shimmer-orbit {
+  to { --shimmer-angle: 360deg; }
+}
+
+@property --shimmer-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/*
+  A conic highlight rotating just inside the border. Drawn into the padding box
+  with a mask so only the 1px edge shows — the alternative, an actual rotating
+  element, repaints the whole surface every frame.
+*/
+.shimmer-edge::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--shimmer-angle),
+    transparent 0deg,
+    color-mix(in oklab, var(--accent) 70%, transparent) 70deg,
+    rgba(255, 255, 255, 0.65) 90deg,
+    transparent 140deg,
+    transparent 360deg
+  );
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  animation: shimmer-orbit 6s linear infinite;
+}
 
 /* ── Motion ────────────────────────────────────────────────────────────── */
 
@@ -286,6 +398,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   :root { --px: 0 !important; --py: 0 !important; }
   .pulse, .enter, .flowing, .drift { animation: none; }
+  .shimmer::before, .shimmer-edge::before { animation: none; opacity: 0; }
+  .shimmer-text, .shimmer-text-invert {
+    animation: none;
+    background: none;
+    color: var(--ink);
+    -webkit-text-fill-color: currentColor;
+  }
   .ambient-field, .ambient-blob, .lift, .panel::after { transition: none; }
   .lift:hover { transform: none; }
 }

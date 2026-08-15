@@ -113,6 +113,7 @@ export function ActivityFeed({ height = "h-[420px]" }: { height?: string }) {
 
   return (
     <Panel
+      spine={connected ? "live" : undefined}
       title="Agent activity"
       subtitle="Live event stream"
       actions={
